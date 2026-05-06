@@ -1,0 +1,37 @@
+package com.example.virtualbuttons;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+
+final class AppActions {
+    static final String CHANNEL_ID = "virtual_buttons_controls";
+    static final String ACTION_VOLUME_UP = "com.example.virtualbuttons.ACTION_VOLUME_UP";
+    static final String ACTION_VOLUME_DOWN = "com.example.virtualbuttons.ACTION_VOLUME_DOWN";
+    static final String ACTION_TOGGLE_MUTE = "com.example.virtualbuttons.ACTION_TOGGLE_MUTE";
+    static final String ACTION_STOP = "com.example.virtualbuttons.ACTION_STOP";
+
+    private AppActions() {}
+
+    static void ensureChannel(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Volume controls", NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("Persistent controls for the virtual volume button");
+            context.getSystemService(NotificationManager.class).createNotificationChannel(channel);
+        }
+    }
+
+    static void startFloatingService(Context context) {
+        Intent intent = new Intent(context, FloatingVolumeService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
+        else context.startService(intent);
+    }
+
+    static Intent overlaySettingsIntent(Context context) {
+        return new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.getPackageName()));
+    }
+}
