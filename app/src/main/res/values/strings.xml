@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Virtual Buttons</string>
+    <string name="tile_label">Volume Button</string>
+</resources>
