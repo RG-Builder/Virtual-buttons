@@ -31,3 +31,20 @@ The app uses `SYSTEM_ALERT_WINDOW` for the floating overlay and a foreground ser
 ```bash
 gradle :app:assembleDebug
 ```
+
+## Download APK
+
+[Download the latest installable APK from GitHub Releases](../../releases/download/latest/VirtualButtons-debug.apk).
+
+After the first successful GitHub Actions run, this link points straight to the APK asset. If Android warns that the app is from an unknown source, allow installs from your browser or file manager and then open the APK again. The linked APK is the debug-signed build produced by GitHub Actions, so it is intended for direct testing and personal use.
+
+### Publishing a fresh APK
+
+GitHub Actions builds an APK for every push and pull request. Pushes to `main` or `work` and manual workflow runs update the stable `latest` release used by the download link above. To publish a versioned release as well, push a tag such as:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow will attach the same APK to that versioned GitHub Release while keeping the stable direct-download APK available.
