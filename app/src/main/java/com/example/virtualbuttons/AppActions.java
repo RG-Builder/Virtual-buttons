@@ -16,6 +16,7 @@ final class AppActions {
     static final String ACTION_STOP = "com.example.virtualbuttons.ACTION_STOP";
     static final String ACTION_HIDE_BUBBLE = "com.example.virtualbuttons.ACTION_HIDE_BUBBLE";
     static final String ACTION_SHOW_BUBBLE = "com.example.virtualbuttons.ACTION_SHOW_BUBBLE";
+    static final String ACTION_REFRESH = "com.example.virtualbuttons.ACTION_REFRESH";
 
     private AppActions() {}
 
@@ -35,6 +36,11 @@ final class AppActions {
 
     static void showBubble(Context context) {
         Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_SHOW_BUBBLE);
+        context.startService(intent);
+    }
+
+    static void refreshService(Context context) {
+        Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_REFRESH);
         context.startService(intent);
     }
 

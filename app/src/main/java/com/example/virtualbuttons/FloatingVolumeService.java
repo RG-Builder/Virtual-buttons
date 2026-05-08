@@ -40,8 +40,28 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private final Runnable hideBubbleRunnable = () -> hideBubble();
     private boolean bubbleVisible = false;
 
-    void hideBubble() { if (bubble != null && bubble.getParent() != null && windowManager != null) { windowManager.removeView(bubble); } bubbleVisible = false; handler.removeCallbacks(hideBubbleRunnable); }
-    void showBubble() { if (bubble == null) initBubble(); if (bubble != null && bubble.getParent() == null && windowManager != null) { windowManager.addView(bubble, bubbleLp); } bubbleVisible = true; scheduleAutoHide(); }
+void hideBubble() {
+        if (bubble != null && bubble.getParent() != null && windowManager != null) {
+            bubble.animate().scaleX(0.5f).scaleY(0.5f).alpha(0f).setDuration(150).withEndAction(() -> {
+                try { if (windowManager != null) windowManager.removeView(bubble); } catch (Exception ignored) {}
+            }).start();
+        }
+        bubbleVisible = false;
+        handler.removeCallbacks(hideBubbleRunnable);
+    }
+    void showBubble() {
+        if (bubble == null) initBubble();
+        if (bubble != null && bubble.getParent() == null && windowManager != null) {
+            windowManager.addView(bubble, bubbleLp);
+            bubble.setScaleX(0.5f);
+            bubble.setScaleY(0.5f);
+            bubble.setAlpha(0f);
+            bubble.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(200).start();
+        }
+        bubbleVisible = true;
+        scheduleAutoHide();
+    }
+    void refreshEdgeGestures() { remove(leftEdge); remove(rightEdge); if (Settings.canDrawOverlays(this)) addEdgeGestures(); }
     private void scheduleAutoHide() { handler.removeCallbacks(hideBubbleRunnable); handler.postDelayed(hideBubbleRunnable, 8000); }
 
     @Override public void onCreate() {
@@ -73,6 +93,9 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     if (bubble == null) initBubble();
                     showBubble();
                 }
+            } else if (AppActions.ACTION_REFRESH.equals(action)) {
+                stopService(new Intent(this, FloatingVolumeService.class));
+                AppActions.startFloatingService(this);
             }
         } else if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) {
             if (bubble == null) initBubble();
@@ -218,16 +241,18 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         PendingIntent up = actionIntent(AppActions.ACTION_VOLUME_UP, 2);
         PendingIntent down = actionIntent(AppActions.ACTION_VOLUME_DOWN, 3);
         PendingIntent mute = actionIntent(AppActions.ACTION_TOGGLE_MUTE, 4);
-        PendingIntent stop = actionIntent(AppActions.ACTION_STOP, 5);
+        PendingIntent showBubble = actionIntent(AppActions.ACTION_SHOW_BUBBLE, 5);
+        PendingIntent stop = actionIntent(AppActions.ACTION_STOP, 6);
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, AppActions.CHANNEL_ID) : new Notification.Builder(this);
         return builder.setSmallIcon(R.drawable.ic_volume)
                 .setContentTitle("Virtual Buttons is ready")
-                .setContentText("Use the floating button, edges, tile, or notification actions.")
+                .setContentText("Tap tile to show bubble \u2022 Swipe edges \u2022 Tap notification actions.")
                 .setOngoing(true)
                 .setContentIntent(open)
                 .addAction(android.R.drawable.arrow_down_float, "Down", down)
                 .addAction(android.R.drawable.arrow_up_float, "Up", up)
                 .addAction(android.R.drawable.ic_lock_silent_mode, "Mute", mute)
+                .addAction(android.R.drawable.ic_menu_view, "Show", showBubble)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stop)
                 .build();
     }

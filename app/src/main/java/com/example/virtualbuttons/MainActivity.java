@@ -177,8 +177,7 @@ public class MainActivity extends Activity {
     private void restartable(String key, int value) { settings.putInt(key, value); restartIfRunning(); refreshStatus(); }
     private void restartIfRunning() {
         if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) {
-            stopService(new Intent(this, FloatingVolumeService.class));
-            AppActions.startFloatingService(this);
+            AppActions.refreshService(this);
         }
     }
 
