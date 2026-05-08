@@ -1,4 +1,19 @@
 <resources>
     <string name="app_name">Virtual Buttons</string>
     <string name="tile_label">Volume Button</string>
-</resources>
+    <string name="app_description">Fast software controls for broken or hard-to-reach volume buttons.</string>
+    <string name="status_active">Virtual Buttons is active</string>
+    <string name="status_active_detail">The floating button, edge gestures, and notification actions are ready.</string>
+    <string name="status_ready">Ready to start</string>
+    <string name="status_ready_detail">Tap the button below to launch the floating controls.</string>
+    <string name="status_permission">Overlay permission required</string>
+    <string name="status_permission_detail">The floating button needs permission to appear on top of other apps. Grant it in system settings.</string>
+    <string name="section_gestures">Gestures</string>
+    <string name="section_floating_button">Floating Button</string>
+    <string name="section_volume_behavior">Volume Behavior</string>
+    <string name="section_reliability">Reliability and Profiles</string>
+    <string name="tip_tile">Tip: add the \u201cVolume Button\u201d Quick Settings tile for one-tap access.</string>
+    <string name="btn_grant_permission">Grant permission</string>
+    <string name="btn_start">Start floating button</string>
+    <string name="btn_restart">Restart</string>
+    <string name="btn_stop">Stop</string>

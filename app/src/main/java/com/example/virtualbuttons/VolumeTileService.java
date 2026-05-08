@@ -1,5 +1,6 @@
 package com.example.virtualbuttons;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
 import android.provider.Settings;
@@ -19,16 +20,24 @@ public class VolumeTileService extends TileService {
         }
         boolean enabled = !settings.overlayEnabled();
         settings.setOverlayEnabled(enabled);
-        if (enabled) AppActions.startFloatingService(this);
-        else stopService(new Intent(this, FloatingVolumeService.class));
-        updateTile();
+        if (enabled) {
+            AppActions.startFloatingService(this);
+            AppActions.showBubble(this);
+            updateTile();
+        } else {
+            AppActions.showBubble(this);
+            Intent hide = new Intent(this, FloatingVolumeService.class).setAction(AppActions.ACTION_HIDE_BUBBLE);
+            startService(hide);
+            updateTile();
+        }
     }
 
     private void updateTile() {
         Tile tile = getQsTile();
         if (tile == null) return;
-        tile.setState(new SettingsStore(this).overlayEnabled() ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
-        tile.setSubtitle("Tap to toggle overlay");
+        boolean active = new SettingsStore(this).overlayEnabled();
+        tile.setState(active ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+        tile.setSubtitle(active ? "Active" : "Tap to start");
         tile.updateTile();
     }
 }

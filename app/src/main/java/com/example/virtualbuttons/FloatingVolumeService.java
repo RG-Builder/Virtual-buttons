@@ -11,13 +11,16 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
@@ -32,6 +35,14 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private View rightEdge;
     private SensorManager sensorManager;
     private long lastShake;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable singleTapRunnable = () -> adjust(1);
+    private final Runnable hideBubbleRunnable = () -> hideBubble();
+    private boolean bubbleVisible = false;
+
+    void hideBubble() { if (bubble != null && bubble.getParent() != null && windowManager != null) { windowManager.removeView(bubble); } bubbleVisible = false; handler.removeCallbacks(hideBubbleRunnable); }
+    void showBubble() { if (bubble == null) initBubble(); if (bubble != null && bubble.getParent() == null && windowManager != null) { windowManager.addView(bubble, bubbleLp); } bubbleVisible = true; scheduleAutoHide(); }
+    private void scheduleAutoHide() { handler.removeCallbacks(hideBubbleRunnable); handler.postDelayed(hideBubbleRunnable, 8000); }
 
     @Override public void onCreate() {
         super.onCreate();
@@ -41,7 +52,6 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         AppActions.ensureChannel(this);
         startForeground(8, notification());
         if (Settings.canDrawOverlays(this)) {
-            addBubble();
             addEdgeGestures();
         }
         registerShakeSensor();
@@ -52,10 +62,21 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             String action = intent.getAction();
             if (AppActions.ACTION_STOP.equals(action)) {
                 settings.setOverlayEnabled(false);
+                hideBubble();
                 stopSelf();
             } else if (AppActions.ACTION_VOLUME_UP.equals(action)) adjust(1);
             else if (AppActions.ACTION_VOLUME_DOWN.equals(action)) adjust(-1);
             else if (AppActions.ACTION_TOGGLE_MUTE.equals(action)) show(volumeController.muteOrRestoreMedia());
+            else if (AppActions.ACTION_HIDE_BUBBLE.equals(action)) hideBubble();
+            else if (AppActions.ACTION_SHOW_BUBBLE.equals(action)) {
+                if (Settings.canDrawOverlays(this)) {
+                    if (bubble == null) initBubble();
+                    showBubble();
+                }
+            }
+        } else if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) {
+            if (bubble == null) initBubble();
+            showBubble();
         }
         return START_STICKY;
     }
@@ -65,47 +86,55 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         remove(indicator);
         remove(leftEdge);
         remove(rightEdge);
+        handler.removeCallbacks(singleTapRunnable);
+        handler.removeCallbacks(hideIndicator);
         if (sensorManager != null) sensorManager.unregisterListener(this);
         super.onDestroy();
     }
 
     @Override public IBinder onBind(Intent intent) { return null; }
 
-    private void addBubble() {
+    private void initBubble() {
+        if (bubble != null) return;
         bubble = new FrameLayout(this);
         int color = Color.argb(Math.round(settings.buttonOpacity() * 2.55f), 103, 80, 164);
         bubble.setBackground(new CircleDrawable(color));
+        bubble.setContentDescription("Volume control bubble. Swipe up or down to change volume. Double-tap to mute. Long-press to hide.");
         TextView icon = new TextView(this);
-        icon.setText("↕");
+        icon.setText("\u25B2\u25BC");
         icon.setTextColor(Color.WHITE);
-        icon.setTextSize(30);
+        icon.setTextSize(dp(11));
         icon.setGravity(Gravity.CENTER);
+        icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         bubble.addView(icon, new FrameLayout.LayoutParams(-1, -1));
         int size = dp(settings.buttonSizeDp());
-        WindowManager.LayoutParams lp = baseParams(size, size);
-        lp.gravity = Gravity.TOP | Gravity.START;
-        lp.x = settings.buttonX();
-        lp.y = settings.buttonY();
-        bubble.setOnTouchListener(new BubbleTouch(lp));
-        windowManager.addView(bubble, lp);
+        bubbleLp = baseParams(size, size);
+        bubbleLp.gravity = Gravity.TOP | Gravity.START;
+        bubbleLp.x = settings.buttonX();
+        bubbleLp.y = settings.buttonY();
+        bubble.setOnTouchListener(new BubbleTouch(bubbleLp));
     }
 
     private void addEdgeGestures() {
         if (!settings.edgeGestures()) return;
         leftEdge = edgeView(-1);
         rightEdge = edgeView(1);
-        WindowManager.LayoutParams left = baseParams(dp(18), -1);
+        int width = dp(settings.edgeWidthDp());
+        WindowManager.LayoutParams left = baseParams(width, -1);
         left.gravity = Gravity.START | Gravity.TOP;
-        WindowManager.LayoutParams right = baseParams(dp(18), -1);
+        WindowManager.LayoutParams right = baseParams(width, -1);
         right.gravity = Gravity.END | Gravity.TOP;
-        windowManager.addView(leftEdge, left);
-        windowManager.addView(rightEdge, right);
+        if (windowManager != null) {
+            windowManager.addView(leftEdge, left);
+            windowManager.addView(rightEdge, right);
+        }
     }
 
     private View edgeView(int sign) {
         View view = new View(this);
         view.setBackgroundColor(Color.TRANSPARENT);
         view.setOnTouchListener(new EdgeTouch(sign));
+        view.setContentDescription(sign > 0 ? "Right edge volume gesture" : "Left edge volume gesture");
         return view;
     }
 
@@ -126,20 +155,37 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         if (indicator == null) {
             indicator = new TextView(this);
             indicator.setTextColor(Color.WHITE);
-            indicator.setTextSize(18);
+            indicator.setTextSize(16);
+            indicator.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             indicator.setGravity(Gravity.CENTER);
-            indicator.setBackground(new RoundRectDrawable(Color.argb(220, 32, 28, 36), dp(18)));
-            WindowManager.LayoutParams lp = baseParams(dp(190), dp(72));
+            int pad = dp(12);
+            indicator.setPadding(pad, pad, pad, pad);
+            indicator.setBackground(new RoundRectDrawable(Color.argb(230, 32, 28, 36), dp(24)));
+            indicator.setAlpha(0f);
+            indicator.setVisibility(View.GONE);
+            indicator.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            WindowManager.LayoutParams lp = baseParams(-2, -2);
             lp.gravity = Gravity.CENTER;
-            windowManager.addView(indicator, lp);
+            if (windowManager != null) windowManager.addView(indicator, lp);
         }
-        indicator.setText((state.stream == android.media.AudioManager.STREAM_MUSIC ? "Media" : "System") + " volume  " + state.percent() + "%");
+        String streamLabel = state.stream == android.media.AudioManager.STREAM_MUSIC ? "\uD83C\uDFB5" : "\uD83D\uDD11";
+        String muteIndicator = state.isMuted() ? " \uD83D\uDD07" : "";
+        indicator.setText(streamLabel + "  " + state.percent() + "%" + muteIndicator);
         indicator.setVisibility(View.VISIBLE);
-        indicator.removeCallbacks(hideIndicator);
-        indicator.postDelayed(hideIndicator, 900);
+        indicator.animate().cancel();
+        indicator.setAlpha(0f);
+        indicator.animate().alpha(1f).setDuration(120).start();
+        handler.removeCallbacks(hideIndicator);
+        handler.postDelayed(hideIndicator, 1200);
     }
 
-    private final Runnable hideIndicator = () -> { if (indicator != null) indicator.setVisibility(View.GONE); };
+    private final Runnable hideIndicator = () -> {
+        if (indicator != null) {
+            indicator.animate().alpha(0f).setDuration(180).withEndAction(() -> {
+                if (indicator != null) indicator.setVisibility(View.GONE);
+            }).start();
+        }
+    };
 
     private void haptic() {
         if (!settings.haptics()) return;
@@ -174,7 +220,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         PendingIntent mute = actionIntent(AppActions.ACTION_TOGGLE_MUTE, 4);
         PendingIntent stop = actionIntent(AppActions.ACTION_STOP, 5);
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, AppActions.CHANNEL_ID) : new Notification.Builder(this);
-        return builder.setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
+        return builder.setSmallIcon(R.drawable.ic_volume)
                 .setContentTitle("Virtual Buttons is ready")
                 .setContentText("Use the floating button, edges, tile, or notification actions.")
                 .setOngoing(true)
@@ -191,47 +237,82 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         return PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private void remove(View view) { if (view != null) try { windowManager.removeView(view); } catch (IllegalArgumentException ignored) {} }
+    private void remove(View view) { if (view != null) try { if (windowManager != null) windowManager.removeView(view); } catch (IllegalArgumentException ignored) {} }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
     private final class BubbleTouch implements View.OnTouchListener {
         private final WindowManager.LayoutParams lp;
         private float downRawX, downRawY, downX, downY;
         private long downAt, lastTap;
+        private boolean didMove = false;
         BubbleTouch(WindowManager.LayoutParams lp) { this.lp = lp; }
         @Override public boolean onTouch(View v, MotionEvent event) {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    downRawX = event.getRawX(); downRawY = event.getRawY(); downX = lp.x; downY = lp.y; downAt = System.currentTimeMillis(); return true;
+                    downRawX = event.getRawX(); downRawY = event.getRawY(); downX = lp.x; downY = lp.y; downAt = System.currentTimeMillis(); didMove = false;
+                    v.postDelayed(longPressCheck, ViewConfiguration.getLongPressTimeout());
+                    return true;
                 case MotionEvent.ACTION_MOVE:
-                    lp.x = Math.round(downX + event.getRawX() - downRawX); lp.y = Math.round(downY + event.getRawY() - downRawY); windowManager.updateViewLayout(bubble, lp); return true;
-                case MotionEvent.ACTION_UP:
-                    float dy = event.getRawY() - downRawY;
                     float dx = event.getRawX() - downRawX;
-                    boolean moved = Math.hypot(dx, dy) > dp(settings.gestureSensitivity());
-                    if (moved && allowsSwipe()) adjust(dy < 0 ? 1 : -1);
-                    else if (allowsDoubleTap() && System.currentTimeMillis() - lastTap < 330) show(volumeController.muteOrRestoreMedia());
-                    else if (!moved && System.currentTimeMillis() - downAt < 220) adjust(1);
-                    lastTap = System.currentTimeMillis();
+                    float dy = event.getRawY() - downRawY;
+                    if (Math.hypot(dx, dy) > dp(4)) { didMove = true; v.removeCallbacks(longPressCheck); }
+                    if (didMove) { lp.x = Math.round(downX + dx); lp.y = Math.round(downY + dy); if (windowManager != null) windowManager.updateViewLayout(bubble, lp); }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    v.removeCallbacks(longPressCheck);
+                    float fdx = event.getRawX() - downRawX;
+                    float fdy = event.getRawY() - downRawY;
+                    boolean moved = Math.hypot(fdx, fdy) > dp(settings.gestureSensitivity());
+                    long now = System.currentTimeMillis();
+                    if (moved && allowsSwipe()) {
+                        handler.removeCallbacks(singleTapRunnable);
+                        adjust(fdy < 0 ? 1 : -1);
+                    } else if (allowsDoubleTap() && now - lastTap < 330) {
+                        handler.removeCallbacks(singleTapRunnable);
+                        show(volumeController.muteOrRestoreMedia());
+                    } else if (!moved) {
+                        if (allowsDoubleTap()) {
+                            handler.postDelayed(singleTapRunnable, 340);
+                        } else {
+                            adjust(1);
+                        }
+                    }
+                    lastTap = now;
                     settings.setButtonPosition(lp.x, lp.y);
                     return true;
             }
             return false;
         }
+        private final Runnable longPressCheck = new Runnable() {
+            @Override public void run() { hideBubble(); }
+        };
         private boolean allowsSwipe() { return settings.gestureMode() != SettingsStore.GestureMode.DOUBLE_TAP; }
         private boolean allowsDoubleTap() { return settings.gestureMode() != SettingsStore.GestureMode.SWIPE; }
     }
 
     private final class EdgeTouch implements View.OnTouchListener {
         private final int sign;
-        private float downY;
+        private float downX, downY;
         EdgeTouch(int sign) { this.sign = sign; }
         @Override public boolean onTouch(View v, MotionEvent event) {
-            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) { downY = event.getRawY(); return true; }
-            if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                downX = event.getRawX();
+                downY = event.getRawY();
+                return true;
+            }
+            if (action == MotionEvent.ACTION_UP) {
+                float dx = event.getRawX() - downX;
                 float dy = event.getRawY() - downY;
-                if (Math.abs(dy) > dp(settings.gestureSensitivity())) adjust(dy < 0 ? 1 : -1);
-                else adjust(sign > 0 ? 1 : -1);
+                boolean vertical = Math.abs(dy) > Math.abs(dx);
+                if (vertical && Math.abs(dy) > dp(settings.gestureSensitivity())) {
+                    adjust(dy < 0 ? 1 : -1);
+                } else if (!vertical) {
+                    // ignore horizontal swipes to avoid interfering with app gestures
+                } else {
+                    adjust(sign > 0 ? 1 : -1);
+                }
                 return true;
             }
             return true;

@@ -6,7 +6,6 @@ import android.media.AudioManager;
 final class VolumeController {
     private final AudioManager audioManager;
     private final SettingsStore settings;
-    private int lastAudibleMedia = -1;
 
     VolumeController(Context context, SettingsStore settings) {
         audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
@@ -17,7 +16,7 @@ final class VolumeController {
         SettingsStore.StreamMode mode = settings.streamMode();
         if (mode == SettingsStore.StreamMode.MEDIA) return AudioManager.STREAM_MUSIC;
         if (mode == SettingsStore.StreamMode.SYSTEM) return AudioManager.STREAM_SYSTEM;
-        return audioManager.isMusicActive() ? AudioManager.STREAM_MUSIC : AudioManager.STREAM_SYSTEM;
+        return audioManager != null && audioManager.isMusicActive() ? AudioManager.STREAM_MUSIC : AudioManager.STREAM_SYSTEM;
     }
 
     VolumeState changeBySteps(int direction) {
@@ -33,10 +32,10 @@ final class VolumeController {
         int stream = AudioManager.STREAM_MUSIC;
         int current = audioManager.getStreamVolume(stream);
         if (current > 0) {
-            lastAudibleMedia = current;
+            settings.setLastAudibleMedia(current);
             audioManager.setStreamVolume(stream, 0, 0);
         } else {
-            int restore = lastAudibleMedia > 0 ? lastAudibleMedia : Math.max(1, audioManager.getStreamMaxVolume(stream) / 2);
+            int restore = settings.lastAudibleMedia() > 0 ? settings.lastAudibleMedia() : Math.max(1, audioManager.getStreamMaxVolume(stream) / 2);
             audioManager.setStreamVolume(stream, restore, 0);
         }
         return state(stream);
@@ -64,5 +63,6 @@ final class VolumeController {
         final int max;
         VolumeState(int stream, int value, int max) { this.stream = stream; this.value = value; this.max = max; }
         int percent() { return max == 0 ? 0 : Math.round(value * 100f / max); }
+        boolean isMuted() { return value == 0; }
     }
 }

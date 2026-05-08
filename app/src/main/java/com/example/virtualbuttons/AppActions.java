@@ -14,6 +14,8 @@ final class AppActions {
     static final String ACTION_VOLUME_DOWN = "com.example.virtualbuttons.ACTION_VOLUME_DOWN";
     static final String ACTION_TOGGLE_MUTE = "com.example.virtualbuttons.ACTION_TOGGLE_MUTE";
     static final String ACTION_STOP = "com.example.virtualbuttons.ACTION_STOP";
+    static final String ACTION_HIDE_BUBBLE = "com.example.virtualbuttons.ACTION_HIDE_BUBBLE";
+    static final String ACTION_SHOW_BUBBLE = "com.example.virtualbuttons.ACTION_SHOW_BUBBLE";
 
     private AppActions() {}
 
@@ -29,6 +31,11 @@ final class AppActions {
         Intent intent = new Intent(context, FloatingVolumeService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
         else context.startService(intent);
+    }
+
+    static void showBubble(Context context) {
+        Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_SHOW_BUBBLE);
+        context.startService(intent);
     }
 
     static Intent overlaySettingsIntent(Context context) {

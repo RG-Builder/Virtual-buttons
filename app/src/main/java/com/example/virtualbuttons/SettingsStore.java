@@ -26,6 +26,7 @@ final class SettingsStore {
     GestureMode gestureMode() { return GestureMode.valueOf(prefs.getString("gesture_mode", GestureMode.BOTH.name())); }
     StreamMode streamMode() { return StreamMode.valueOf(prefs.getString("stream_mode", StreamMode.ACTIVE.name())); }
     boolean edgeGestures() { return prefs.getBoolean("edge_gestures", true); }
+    int edgeWidthDp() { return prefs.getInt("edge_width", 12); }
     boolean shakeToMute() { return prefs.getBoolean("shake_to_mute", false); }
     boolean haptics() { return prefs.getBoolean("haptics", true); }
     boolean visualIndicator() { return prefs.getBoolean("visual_indicator", true); }
@@ -34,6 +35,8 @@ final class SettingsStore {
     int nightStartHour() { return prefs.getInt("night_start", 22); }
     int nightEndHour() { return prefs.getInt("night_end", 7); }
     boolean startOnBoot() { return prefs.getBoolean("start_on_boot", true); }
+    int lastAudibleMedia() { return prefs.getInt("last_audible_media", -1); }
+    void setLastAudibleMedia(int value) { prefs.edit().putInt("last_audible_media", value).apply(); }
 
     void putInt(String key, int value) { prefs.edit().putInt(key, value).apply(); }
     void putBoolean(String key, boolean value) { prefs.edit().putBoolean(key, value).apply(); }
