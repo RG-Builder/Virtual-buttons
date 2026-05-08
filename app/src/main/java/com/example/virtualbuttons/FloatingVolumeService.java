@@ -39,6 +39,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private final Runnable singleTapRunnable = () -> adjust(1);
     private final Runnable hideBubbleRunnable = () -> hideBubble();
     private boolean bubbleVisible = false;
+    private WindowManager.LayoutParams bubbleLp;
 
 void hideBubble() {
         if (bubble != null && bubble.getParent() != null && windowManager != null) {
