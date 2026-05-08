@@ -52,7 +52,7 @@ jobs:
           draft: false
           prerelease: false
           tag_name: latest
-          release_name: "Latest Build"
+          name: "Latest Build"
           body: "Direct download: VirtualButtons.apk"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
