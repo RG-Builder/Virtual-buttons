@@ -48,6 +48,21 @@ gradle :app:assembleDebug
 
 ## Download APK
 
-**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/download/latest/VirtualButtons.apk)**
+**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest/download/VirtualButtons.apk)**
 
 On first install, Android may warn about unknown sources — tap Allow and reopen the APK.
+
+---
+
+## Release History
+
+### v1.0.0
+- Initial release
+- Floating button with swipe/tap gestures
+- Edge gesture strips
+- Quick Settings tile
+- Notification controls
+- Shake to mute
+- Auto night profile
+- Haptic feedback
+- Visual volume indicator

@@ -15,7 +15,12 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix ""
-            archiveFileName = "VirtualButtons.apk"
         }
+    }
+}
+
+android.applicationVariants.configureEach { variant ->
+    variant.outputs.each { output ->
+        output.outputFileName = "VirtualButtons.apk"
     }
 }
