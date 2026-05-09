@@ -67,4 +67,14 @@
     <string name="shake_sensitivity_desc">Higher = easier to trigger with gentle shakes. Lower = requires stronger shakes.</string>
     <string name="accessibility_title">Accessibility</string>
     <string name="accessibility_desc">Speak volume changes aloud after each adjustment.</string>
+    <string name="desc_edge_gestures">Swipe from either screen edge to adjust volume.</string>
+    <string name="desc_start_on_boot">Restarts overlay after reboot.</string>
+    <string name="desc_night_profile">Lower volume each night automatically.</string>
+    <string name="desc_haptic">Short vibration confirms each adjustment.</string>
+    <string name="desc_visual_indicator">Show a compact volume pill after changes.</string>
+    <string name="widget_description">Virtual volume controls</string>
+    <string name="widget_vol_up">Volume up</string>
+    <string name="widget_vol_down">Volume down</string>
+    <string name="widget_mute">Mute</string>
+    <string name="section_settings">Settings</string>
 </resources>

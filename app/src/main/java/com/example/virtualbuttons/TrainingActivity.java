@@ -1,16 +1,14 @@
 package com.example.virtualbuttons;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
-import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.View;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -21,8 +19,6 @@ public class TrainingActivity extends Activity {
     private TextView feedback;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private static final DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
-    private static final OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.4f);
-    private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,31 +33,38 @@ public class TrainingActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
     }
 
+    private int bg() { return getColor(R.color.vb_surface); }
+    private int card() { return Color.WHITE; }
+    private int text() { return getColor(R.color.vb_on_surface); }
+    private int textSec() { return getColor(R.color.vb_outline); }
+    private int primary() { return getColor(R.color.vb_primary); }
+
     private LinearLayout makeLayout() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         int pad = dp(24);
         root.setPadding(pad, pad, pad, pad);
-        root.setBackgroundColor(0xFFFEF7FF);
+        root.setBackgroundColor(bg());
 
         TextView title = new TextView(this);
         title.setText(getString(R.string.training_title));
         title.setTextSize(24);
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        title.setTextColor(text());
         title.setPadding(0, dp(16), 0, dp(8));
 
         TextView hint = new TextView(this);
         hint.setText(getString(R.string.training_hint));
         hint.setTextSize(15);
-        hint.setTextColor(Color.rgb(72, 68, 78));
+        hint.setTextColor(textSec());
         hint.setLineSpacing(dp(4), 1f);
         hint.setPadding(0, 0, 0, dp(24));
 
         LinearLayout seekCard = new LinearLayout(this);
         seekCard.setOrientation(LinearLayout.VERTICAL);
         seekCard.setPadding(dp(16), dp(12), dp(16), dp(12));
-        seekCard.setBackground(new RoundRectDrawable(Color.WHITE, dp(12)));
+        seekCard.setBackground(new RoundRectDrawable(card(), dp(12)));
 
         LinearLayout seekHeader = new LinearLayout(this);
         seekHeader.setOrientation(LinearLayout.HORIZONTAL);
@@ -71,11 +74,12 @@ public class TrainingActivity extends Activity {
         seekLabel.setText("Gesture sensitivity");
         seekLabel.setTextSize(15);
         seekLabel.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        seekLabel.setTextColor(text());
 
         TextView seekVal = new TextView(this);
         seekVal.setText(settings.gestureSensitivity() + "dp");
         seekVal.setTextSize(15);
-        seekVal.setTextColor(Color.rgb(103, 80, 164));
+        seekVal.setTextColor(primary());
         seekVal.setPadding(dp(8), 0, 0, 0);
 
         seekHeader.addView(seekLabel);
@@ -85,8 +89,8 @@ public class TrainingActivity extends Activity {
         SeekBar seek = new SeekBar(this);
         seek.setMax(80);
         seek.setProgress(settings.gestureSensitivity() - 16);
-        seek.setThumbTintList(android.content.res.ColorStateList.valueOf(Color.rgb(103, 80, 164)));
-        seek.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.rgb(103, 80, 164)));
+        seek.setThumbTintList(android.content.res.ColorStateList.valueOf(primary()));
+        seek.setProgressTintList(android.content.res.ColorStateList.valueOf(primary()));
         seek.setOnSeekBarChangeListener(new SimpleSeekListener(
             p -> seekVal.setText((p + 16) + "dp"),
             p -> { settings.putInt("gesture_sensitivity", p + 16); ActionManager.refreshService(this); }
@@ -98,7 +102,7 @@ public class TrainingActivity extends Activity {
         feedback = new TextView(this);
         feedback.setTextSize(18);
         feedback.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        feedback.setTextColor(Color.rgb(27, 94, 32));
+        feedback.setTextColor(getColor(R.color.vb_success));
         feedback.setPadding(0, dp(16), 0, dp(16));
         feedback.setVisibility(TextView.GONE);
 
@@ -108,15 +112,13 @@ public class TrainingActivity extends Activity {
 
         Button done = makePrimaryBtn(getString(R.string.training_done));
         done.setOnClickListener(v -> {
-            v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
-                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start();
+            animatePress(v);
             handler.postDelayed(this::finish, 100);
         });
 
         Button reset = makeTextBtn(getString(R.string.training_reset));
         reset.setOnClickListener(v -> {
-            v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
-                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start();
+            animatePress(v);
             feedback.setVisibility(TextView.GONE);
             ActionManager.refreshService(this);
         });
@@ -147,14 +149,22 @@ public class TrainingActivity extends Activity {
         return root;
     }
 
+    private void animatePress(View v) {
+        v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80).withEndAction(new Runnable() {
+            @Override public void run() {
+                v.animate().scaleX(1f).scaleY(1f).setDuration(80).start();
+            }
+        }).start();
+    }
+
     private Button makeTextBtn(String label) {
         Button btn = new Button(this);
         btn.setText(label);
         btn.setAllCaps(false);
         btn.setTextSize(14);
-        btn.setTextColor(Color.rgb(103, 80, 164));
+        btn.setTextColor(primary());
         GradientDrawable bg = new GradientDrawable();
-        bg.setStroke(dp(1), Color.rgb(103, 80, 164));
+        bg.setStroke(dp(1), primary());
         bg.setCornerRadius(dp(12));
         bg.setColor(Color.TRANSPARENT);
         btn.setBackground(bg);
@@ -168,7 +178,7 @@ public class TrainingActivity extends Activity {
         btn.setTextSize(14);
         btn.setTextColor(Color.WHITE);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.rgb(103, 80, 164));
+        bg.setColor(primary());
         bg.setCornerRadius(dp(12));
         btn.setBackground(bg);
         return btn;

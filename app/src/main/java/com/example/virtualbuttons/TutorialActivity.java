@@ -1,15 +1,15 @@
 package com.example.virtualbuttons;
 
 import android.app.Activity;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.animation.TranslateAnimation;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -17,10 +17,11 @@ import android.widget.TextView;
 
 public class TutorialActivity extends Activity {
     private int currentStep = 0;
-    private LinearLayout contentRoot;
-    private TextView stepNum;
     private TextView titleView;
     private TextView descView;
+    private TextView stepNum;
+    private Button nextBtn;
+    private LinearLayout contentRoot;
     private final TutorialStep[] steps = {
         new TutorialStep(R.string.tutorial_bubble_title, R.string.tutorial_bubble_detail),
         new TutorialStep(R.string.tutorial_edge_title, R.string.tutorial_edge_detail),
@@ -34,18 +35,23 @@ public class TutorialActivity extends Activity {
         setContentView(makeLayout());
     }
 
+    private int bg() { return getColor(R.color.vb_surface); }
+    private int text() { return getColor(R.color.vb_on_surface); }
+    private int textSec() { return getColor(R.color.vb_outline); }
+    private int primary() { return getColor(R.color.vb_primary); }
+
     private LinearLayout makeLayout() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         int pad = dp(32);
         root.setPadding(pad, pad, pad, pad);
-        root.setBackgroundColor(Color.WHITE);
+        root.setBackgroundColor(bg());
 
         stepNum = new TextView(this);
         stepNum.setText((currentStep + 1) + " / " + steps.length);
         stepNum.setTextSize(13);
-        stepNum.setTextColor(Color.rgb(120, 116, 126));
+        stepNum.setTextColor(textSec());
         stepNum.setPadding(0, 0, 0, dp(16));
 
         TextView icon = new TextView(this);
@@ -58,14 +64,14 @@ public class TutorialActivity extends Activity {
         titleView.setText(getString(steps[currentStep].titleRes));
         titleView.setTextSize(22);
         titleView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        titleView.setTextColor(Color.rgb(29, 27, 32));
+        titleView.setTextColor(text());
         titleView.setGravity(Gravity.CENTER);
         titleView.setPadding(0, 0, 0, dp(12));
 
         descView = new TextView(this);
         descView.setText(getString(steps[currentStep].descRes));
         descView.setTextSize(16);
-        descView.setTextColor(Color.rgb(72, 68, 78));
+        descView.setTextColor(textSec());
         descView.setLineSpacing(dp(6), 1f);
         descView.setGravity(Gravity.CENTER);
         descView.setPadding(0, 0, 0, dp(32));
@@ -75,10 +81,11 @@ public class TutorialActivity extends Activity {
         navRow.setGravity(Gravity.CENTER);
 
         Button skip = makeTextBtn(getString(R.string.tutorial_skip));
-        skip.setOnClickListener(v -> finishTutorial(false));
+        skip.setOnClickListener(this::animatePress);
 
-        Button next = makePrimaryBtn(currentStep < steps.length - 1 ? getString(R.string.tutorial_next) : getString(R.string.tutorial_got_it));
-        next.setOnClickListener(v -> {
+        nextBtn = makePrimaryBtn(currentStep < steps.length - 1 ? getString(R.string.tutorial_next) : getString(R.string.tutorial_got_it));
+        nextBtn.setOnClickListener(v -> {
+            animatePress(v);
             if (currentStep < steps.length - 1) {
                 animateToNext();
                 currentStep++;
@@ -91,10 +98,10 @@ public class TutorialActivity extends Activity {
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(0, dp(48), 1f);
         sp.setMargins(dp(6), 0, dp(6), 0);
         skip.setLayoutParams(sp);
-        next.setLayoutParams(sp);
+        nextBtn.setLayoutParams(sp);
 
         navRow.addView(skip);
-        navRow.addView(next);
+        navRow.addView(nextBtn);
 
         root.addView(stepNum);
         root.addView(icon);
@@ -107,33 +114,30 @@ public class TutorialActivity extends Activity {
     }
 
     private void animateToNext() {
-        DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
-        OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.2f);
-
-        Animation slideLeft = new TranslateAnimation(0, -contentRoot.getWidth(), 0, 0);
-        slideLeft.setDuration(250);
-        slideLeft.setInterpolator(DECEL);
-        Animation fadeOut = new android.view.animation.AlphaAnimation(1f, 0f);
-        fadeOut.setDuration(200);
-
-        Animation slideRight = new TranslateAnimation(contentRoot.getWidth(), 0, 0, 0);
-        slideRight.setDuration(250);
-        slideRight.setInterpolator(DECEL);
-        Animation fadeIn = new android.view.animation.AlphaAnimation(0f, 1f);
-        fadeIn.setDuration(200);
-
+        Animation slideLeft = new TranslateAnimation(0, -contentRoot.getWidth() * 0.4f, 0, 0);
+        slideLeft.setDuration(200);
+        Animation slideRight = new TranslateAnimation(contentRoot.getWidth() * 0.4f, 0, 0, 0);
+        slideRight.setDuration(200);
+        slideRight.setStartOffset(200);
         titleView.startAnimation(slideLeft);
-        descView.startAnimation(fadeOut);
-        titleView.postDelayed(() -> {
-            titleView.startAnimation(slideRight);
-            descView.startAnimation(fadeIn);
-        }, 200);
+        descView.startAnimation(slideLeft);
+        titleView.postDelayed(() -> titleView.startAnimation(slideRight), 220);
+        descView.postDelayed(() -> descView.startAnimation(slideRight), 220);
     }
 
     private void updateContent() {
         stepNum.setText((currentStep + 1) + " / " + steps.length);
         titleView.setText(getString(steps[currentStep].titleRes));
         descView.setText(getString(steps[currentStep].descRes));
+        nextBtn.setText(currentStep < steps.length - 1 ? getString(R.string.tutorial_next) : getString(R.string.tutorial_got_it));
+    }
+
+    private void animatePress(View v) {
+        v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80).withEndAction(new Runnable() {
+            @Override public void run() {
+                v.animate().scaleX(1f).scaleY(1f).setDuration(80).start();
+            }
+        }).start();
     }
 
     private Button makeTextBtn(String label) {
@@ -141,14 +145,12 @@ public class TutorialActivity extends Activity {
         btn.setText(label);
         btn.setAllCaps(false);
         btn.setTextSize(14);
-        btn.setTextColor(Color.rgb(103, 80, 164));
+        btn.setTextColor(primary());
         GradientDrawable bg = new GradientDrawable();
-        bg.setStroke(dp(1), Color.rgb(103, 80, 164));
+        bg.setStroke(dp(1), primary());
         bg.setCornerRadius(dp(12));
         bg.setColor(Color.TRANSPARENT);
         btn.setBackground(bg);
-        btn.setOnClickListener(v -> btn.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
-            .withEndAction(() -> btn.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start());
         return btn;
     }
 
@@ -159,18 +161,14 @@ public class TutorialActivity extends Activity {
         btn.setTextSize(14);
         btn.setTextColor(Color.WHITE);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.rgb(103, 80, 164));
+        bg.setColor(primary());
         bg.setCornerRadius(dp(12));
         btn.setBackground(bg);
-        btn.setOnClickListener(v -> btn.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
-            .withEndAction(() -> btn.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start());
         return btn;
     }
 
     private void finishTutorial(boolean completed) {
-        if (completed) {
-            new SettingsStore(this).setOnboardingDone(true);
-        }
+        if (completed) new SettingsStore(this).setOnboardingDone(true);
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
         finish();
     }
@@ -180,9 +178,6 @@ public class TutorialActivity extends Activity {
     private static class TutorialStep {
         final int titleRes;
         final int descRes;
-        TutorialStep(int titleRes, int descRes) {
-            this.titleRes = titleRes;
-            this.descRes = descRes;
-        }
+        TutorialStep(int titleRes, int descRes) { this.titleRes = titleRes; this.descRes = descRes; }
     }
 }

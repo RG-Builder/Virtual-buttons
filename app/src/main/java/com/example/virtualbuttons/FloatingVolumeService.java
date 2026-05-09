@@ -397,11 +397,11 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                 .setContentText("Tap tile to show bubble \u2022 Swipe edges \u2022 Tap notification actions.")
                 .setOngoing(true)
                 .setContentIntent(open)
-                .addAction(android.R.drawable.arrow_down_float, "Down", down)
-                .addAction(android.R.drawable.arrow_up_float, "Up", up)
-                .addAction(android.R.drawable.ic_lock_silent_mode, "Mute", mute)
-                .addAction(android.R.drawable.ic_menu_view, "Show", showBubble)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stop)
+                .addAction(R.drawable.ic_action_down, "Down", down)
+                .addAction(R.drawable.ic_action_up, "Up", up)
+                .addAction(R.drawable.ic_action_mute, "Mute", mute)
+                .addAction(R.drawable.ic_action_show, "Show", showBubble)
+                .addAction(R.drawable.ic_action_stop, "Stop", stop)
                 .build();
     }
 

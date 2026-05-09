@@ -6,10 +6,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -22,19 +20,19 @@ public class BatteryActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(28);
         root.setPadding(pad, pad, pad, pad);
-        root.setBackgroundColor(0xFFFEF7FF);
+        root.setBackgroundColor(getColor(R.color.vb_surface));
 
         TextView title = new TextView(this);
         title.setText(getString(R.string.battery_title));
         title.setTextSize(24);
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        title.setTextColor(Color.rgb(29, 27, 32));
+        title.setTextColor(getColor(R.color.vb_on_surface));
         title.setPadding(0, dp(8), 0, dp(12));
 
         TextView detail = new TextView(this);
         detail.setText(getString(R.string.battery_detail));
         detail.setTextSize(15);
-        detail.setTextColor(Color.rgb(72, 68, 78));
+        detail.setTextColor(getColor(R.color.vb_outline));
         detail.setLineSpacing(dp(4), 1f);
         detail.setPadding(0, 0, 0, dp(24));
 
@@ -44,19 +42,16 @@ public class BatteryActivity extends Activity {
         openSettings.setTextSize(14);
         openSettings.setTextColor(Color.WHITE);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.rgb(103, 80, 164));
+        bg.setColor(getColor(R.color.vb_primary));
         bg.setCornerRadius(dp(12));
         openSettings.setBackground(bg);
         openSettings.setOnClickListener(v -> {
             try {
                 Intent intent = new Intent();
-                intent.setComponent(new ComponentName(
-                    "com.android.settings",
-                    "com.android.settings.Settings$BatteryOptimizationActivity"));
+                intent.setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$BatteryOptimizationActivity"));
                 startActivity(intent);
             } catch (Exception e) {
-                Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-                startActivity(intent);
+                startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
             }
             finish();
         });
@@ -65,7 +60,7 @@ public class BatteryActivity extends Activity {
         dismiss.setText(getString(R.string.tutorial_skip));
         dismiss.setAllCaps(false);
         dismiss.setTextSize(14);
-        dismiss.setTextColor(Color.rgb(103, 80, 164));
+        dismiss.setTextColor(getColor(R.color.vb_primary));
         dismiss.setBackgroundColor(Color.TRANSPARENT);
         dismiss.setOnClickListener(v -> finish());
 
