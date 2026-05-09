@@ -17,6 +17,21 @@ public class VolumeTileService extends TileService {
             startActivityAndCollapse(ActionManager.overlaySettingsIntent(this));
             return;
         }
+        if (settings.backgroundRunning()) {
+            if (settings.overlayEnabled()) {
+                if (bubble != null && bubble.getParent() != null) {
+                    Intent hide = new Intent(this, FloatingVolumeService.class).setAction(ActionManager.ACTION_HIDE_BUBBLE);
+                    startService(hide);
+                } else {
+                    ActionManager.showBubble(this);
+                }
+            } else {
+                settings.setOverlayEnabled(true);
+                ActionManager.startFloatingService(this);
+            }
+            updateTile();
+            return;
+        }
         boolean enabled = !settings.overlayEnabled();
         settings.setOverlayEnabled(enabled);
         if (enabled) {
@@ -24,9 +39,10 @@ public class VolumeTileService extends TileService {
             ActionManager.showBubble(this);
             updateTile();
         } else {
-            ActionManager.showBubble(this);
-            Intent hide = new Intent(this, FloatingVolumeService.class).setAction(ActionManager.ACTION_HIDE_BUBBLE);
-            startService(hide);
+            if (settings.backgroundRunning()) settings.setBackgroundRunning(false);
+            settings.setOverlayEnabled(false);
+            Intent stop = new Intent(this, FloatingVolumeService.class).setAction(ActionManager.ACTION_STOP);
+            startService(stop);
             updateTile();
         }
     }
@@ -34,9 +50,15 @@ public class VolumeTileService extends TileService {
     private void updateTile() {
         Tile tile = getQsTile();
         if (tile == null) return;
-        boolean active = new SettingsStore(this).overlayEnabled();
+        SettingsStore settings = new SettingsStore(this);
+        boolean bg = settings.backgroundRunning();
+        boolean active = settings.overlayEnabled();
         tile.setState(active ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
-        tile.setSubtitle(active ? "Active" : "Tap to start");
+        if (bg) {
+            tile.setSubtitle(active ? "Background" : "Tap to show");
+        } else {
+            tile.setSubtitle(active ? "Active" : "Tap to start");
+        }
         tile.updateTile();
     }
 }

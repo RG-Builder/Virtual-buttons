@@ -176,7 +176,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         btnRow.addView(stopBtn);
 
         primaryBtn.setOnClickListener(v -> { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); animatePress(v); if (!Settings.canDrawOverlays(this)) { startActivity(ActionManager.overlaySettingsIntent(this)); } else { checkBatteryOptimization(); settings.setOverlayEnabled(true); ActionManager.startFloatingService(this); refreshStatus(); } });
-        stopBtn.setOnClickListener(v -> { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); animatePress(v); settings.setOverlayEnabled(false); stopService(new Intent(this, FloatingVolumeService.class)); refreshStatus(); });
+        stopBtn.setOnClickListener(v -> { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); animatePress(v); if (settings.backgroundRunning()) settings.setBackgroundRunning(false); settings.setOverlayEnabled(false); ActionManager.stopFloatingService(this); refreshStatus(); });
 
         card.addView(status);
         card.addView(desc);
@@ -218,6 +218,18 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
         content.addView(section(getString(R.string.section_reliability)));
         addCheck(getString(R.string.desc_start_on_boot), "", settings.startOnBoot(), (b, c) -> settings.putBoolean("start_on_boot", c));
+        addCheck(getString(R.string.hide_notification_title), getString(R.string.hide_notification_desc), settings.hideNotification(), (b, c) -> { settings.setHideNotification(c); restartIfRunning(); });
+        addCheck(getString(R.string.background_running_title), getString(R.string.background_running_desc), settings.backgroundRunning(), (b, c) -> {
+            settings.setBackgroundRunning(c);
+            if (c) {
+                if (!Settings.canDrawOverlays(this)) startActivity(ActionManager.overlaySettingsIntent(this));
+                settings.setOverlayEnabled(true);
+                ActionManager.startBackground(this);
+            } else {
+                ActionManager.stopFloatingService(this);
+            }
+            refreshStatus();
+        });
         addCheck(getString(R.string.desc_night_profile), "", settings.autoNightProfile(), (b, c) -> {
             if (c && !ActionManager.canScheduleExactAlarms(this)) {
                 startActivity(ActionManager.exactAlarmIntent(this));

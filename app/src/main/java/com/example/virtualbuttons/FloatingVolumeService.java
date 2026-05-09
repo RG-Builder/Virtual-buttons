@@ -94,7 +94,19 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     void hideBubble() { hideBubble(false); }
 
     void showBubble() {
+        showBubble(false);
+    }
+
+    void showBubblePermanent() {
+        bubblePinned = true;
+        showBubble(true);
+    }
+
+    private void showBubble(boolean preservePinned) {
         if (bubble == null) initBubble();
+        boolean wasPinned = bubblePinned;
+        bubbleVisible = true;
+        if (!preservePinned) bubblePinned = false;
         if (bubble != null && bubble.getParent() == null && windowManager != null) {
             windowManager.addView(bubble, bubbleLp);
             bubble.setScaleX(0f); bubble.setScaleY(0f); bubble.setAlpha(0f);
@@ -109,8 +121,10 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             set.setInterpolator(OVERSHOOT);
             set.start();
         }
-        bubbleVisible = true;
-        if (!bubblePinned) scheduleAutoHide();
+        if (preservePinned && wasPinned) {
+            return;
+        }
+        scheduleAutoHide();
     }
 
     void refreshEdgeGestures() {
@@ -135,6 +149,12 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             addEdgeGestures();
         }
         registerShakeSensor();
+        if (settings.overlayEnabled()) {
+            if (bubble == null) initBubble();
+            if (!settings.backgroundRunning()) {
+                showBubble();
+            }
+        }
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -142,17 +162,23 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             String action = intent.getAction();
             if (ActionManager.ACTION_STOP.equals(action)) {
                 settings.setOverlayEnabled(false);
+                if (settings.backgroundRunning()) settings.setBackgroundRunning(false);
                 hideBubble(true);
                 stopSelf();
             } else if (ActionManager.ACTION_VOLUME_UP.equals(action)) adjust(1);
             else if (ActionManager.ACTION_VOLUME_DOWN.equals(action)) adjust(-1);
             else if (ActionManager.ACTION_TOGGLE_MUTE.equals(action)) show(volumeController.muteOrRestoreMedia());
-            else if (ActionManager.ACTION_HIDE_BUBBLE.equals(action)) hideBubble(true);
-            else if (ActionManager.ACTION_SHOW_BUBBLE_PERMANENT.equals(action)) {
+            else if (ActionManager.ACTION_HIDE_BUBBLE.equals(action)) {
+                if (settings.backgroundRunning()) {
+                    bubblePinned = false;
+                    hideBubble(false);
+                } else {
+                    hideBubble(true);
+                }
+            } else if (ActionManager.ACTION_SHOW_BUBBLE_PERMANENT.equals(action)) {
                 if (Settings.canDrawOverlays(this)) {
-                    bubblePinned = true;
                     if (bubble == null) initBubble();
-                    showBubble();
+                    showBubblePermanent();
                 }
             } else if (ActionManager.ACTION_SHOW_BUBBLE.equals(action)) {
                 if (Settings.canDrawOverlays(this)) {
@@ -162,10 +188,15 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             } else if (ActionManager.ACTION_REFRESH.equals(action)) {
                 stopService(new Intent(this, FloatingVolumeService.class));
                 ActionManager.startFloatingService(this);
+            } else if (ActionManager.ACTION_DISMISS_NOTIFICATION.equals(action)) {
+                hideBubble(true);
+                stopSelf();
             }
         } else if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) {
             if (bubble == null) initBubble();
-            showBubble();
+            if (!settings.backgroundRunning()) {
+                showBubble();
+            }
         }
         return START_STICKY;
     }
@@ -397,17 +428,22 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         PendingIntent showBubble = actionIntent(ActionManager.ACTION_SHOW_BUBBLE_PERMANENT, 5);
         PendingIntent stop = actionIntent(ActionManager.ACTION_STOP, 6);
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, ActionManager.CHANNEL_ID) : new Notification.Builder(this);
-        return builder.setSmallIcon(R.drawable.ic_volume)
-                .setContentTitle("Virtual Buttons is ready")
-                .setContentText("Tap tile to show bubble \u2022 Swipe edges \u2022 Tap notification actions.")
-                .setOngoing(true)
+        boolean hideNotif = settings.hideNotification();
+        Notification.Builder nb = builder.setSmallIcon(R.drawable.ic_volume)
+                .setContentTitle(hideNotif ? "." : "Virtual Buttons is ready")
+                .setContentText(hideNotif ? "" : "Tap tile to show bubble \u2022 Swipe edges \u2022 Tap notification actions.")
+                .setOngoing(!hideNotif)
                 .setContentIntent(open)
                 .addAction(R.drawable.ic_action_down, "Down", down)
                 .addAction(R.drawable.ic_action_up, "Up", up)
                 .addAction(R.drawable.ic_action_mute, "Mute", mute)
                 .addAction(R.drawable.ic_action_show, "Show", showBubble)
-                .addAction(R.drawable.ic_action_stop, "Stop", stop)
-                .build();
+                .addAction(R.drawable.ic_action_stop, "Stop", stop);
+        if (hideNotif) {
+            PendingIntent dismiss = actionIntent(ActionManager.ACTION_DISMISS_NOTIFICATION, 7);
+            nb.addAction(R.drawable.ic_volume, "Hide", dismiss);
+        }
+        return nb.build();
     }
 
     private PendingIntent actionIntent(String action, int requestCode) {
@@ -423,7 +459,12 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         private float downRawX, downRawY, downX, downY;
         private long lastTap;
         private boolean didMove = false;
+        private boolean tracking = false;
         BubbleTouch(WindowManager.LayoutParams lp) { this.lp = lp; }
+        private void resetTouchState() {
+            didMove = false;
+            tracking = false;
+        }
         @Override public boolean onTouch(View v, MotionEvent event) {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
@@ -435,13 +476,14 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     press.setDuration(120);
                     press.setInterpolator(ACCEL_DECEL);
                     press.start();
-                    downRawX = event.getRawX(); downRawY = event.getRawY(); downX = lp.x; downY = lp.y; didMove = false;
+                    downRawX = event.getRawX(); downRawY = event.getRawY(); downX = lp.x; downY = lp.y; didMove = false; tracking = true;
                     v.postDelayed(longPressCheck, ViewConfiguration.getLongPressTimeout());
                     return true;
                 case MotionEvent.ACTION_MOVE:
+                    if (!tracking) return true;
                     float dx = event.getRawX() - downRawX;
                     float dy = event.getRawY() - downRawY;
-                    if (Math.hypot(dx, dy) > dp(4)) { didMove = true; v.removeCallbacks(longPressCheck); }
+                    if (!didMove && Math.hypot(dx, dy) > dp(4)) { didMove = true; v.removeCallbacks(longPressCheck); }
                     if (didMove) {
                         int displayW = windowManager.getDefaultDisplay().getWidth();
                         int displayH = windowManager.getDefaultDisplay().getHeight();
@@ -455,13 +497,16 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     v.removeCallbacks(longPressCheck);
+                    resetTouchState();
                     float fdx = event.getRawX() - downRawX;
                     float fdy = event.getRawY() - downRawY;
-                    boolean moved = Math.hypot(fdx, fdy) > gestureThreshold();
+                    double dist = Math.hypot(fdx, fdy);
+                    boolean moved = didMove || dist > gestureThreshold();
                     long now = System.currentTimeMillis();
                     if (moved && allowsSwipe()) {
                         handler.removeCallbacks(singleTapRunnable);
-                        adjust(fdy < 0 ? 1 : -1);
+                        int dir = fdy < 0 ? 1 : -1;
+                        adjust(dir);
                     } else if (allowsDoubleTap() && now - lastTap < 330) {
                         handler.removeCallbacks(singleTapRunnable);
                         show(volumeController.muteOrRestoreMedia());
@@ -496,25 +541,38 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private final class EdgeTouch implements View.OnTouchListener {
         private final int sign;
         private float downX, downY;
+        private boolean isDragging = false;
+        private static final int VERTICAL_DRAG_THRESHOLD = 8;
         EdgeTouch(int sign) { this.sign = sign; }
         @Override public boolean onTouch(View v, MotionEvent event) {
             int action = event.getActionMasked();
             if (action == MotionEvent.ACTION_DOWN) {
                 downX = event.getRawX();
                 downY = event.getRawY();
+                isDragging = false;
                 return true;
             }
-            if (action == MotionEvent.ACTION_UP) {
+            if (action == MotionEvent.ACTION_MOVE) {
                 float dx = event.getRawX() - downX;
                 float dy = event.getRawY() - downY;
-                boolean vertical = Math.abs(dy) > Math.abs(dx);
-                if (vertical && Math.abs(dy) > dp(settings.gestureSensitivity())) {
+                if (!isDragging && Math.abs(dy) > VERTICAL_DRAG_THRESHOLD) {
+                    isDragging = true;
+                }
+                if (isDragging) {
                     showEdgeTrail(sign > 0 ? rightTrail : leftTrail, downY, dy);
-                    adjust(dy < 0 ? 1 : -1);
                 }
                 return true;
             }
+            if (action == MotionEvent.ACTION_UP) {
+                if (isDragging) {
+                    float dy = event.getRawY() - downY;
+                    adjust(dy < 0 ? 1 : -1);
+                }
+                isDragging = false;
+                return true;
+            }
             if (action == MotionEvent.ACTION_CANCEL) {
+                isDragging = false;
                 return true;
             }
             return true;

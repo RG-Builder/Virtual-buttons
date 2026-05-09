@@ -9,7 +9,11 @@ public class BootReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
         SettingsStore settings = new SettingsStore(context);
         AutoProfileScheduler.schedule(context);
-        if (settings.startOnBoot() && settings.overlayEnabled() && Settings.canDrawOverlays(context)) {
+        if (!Settings.canDrawOverlays(context)) return;
+        if (settings.backgroundRunning()) {
+            if (!settings.overlayEnabled()) settings.setOverlayEnabled(true);
+            ActionManager.startFloatingService(context);
+        } else if (settings.startOnBoot() && settings.overlayEnabled()) {
             ActionManager.startFloatingService(context);
         }
     }

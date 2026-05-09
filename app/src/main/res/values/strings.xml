@@ -69,6 +69,10 @@
     <string name="accessibility_desc">Speak volume changes aloud after each adjustment.</string>
     <string name="desc_edge_gestures">Swipe from either screen edge to adjust volume.</string>
     <string name="desc_start_on_boot">Restarts overlay after reboot.</string>
+    <string name="hide_notification_title">Hide notification</string>
+    <string name="hide_notification_desc">Hide the persistent notification from the status bar while keeping controls running.</string>
+    <string name="background_running_title">Background running</string>
+    <string name="background_running_desc">Keep overlay always running, auto-starts on boot, swipe edges to adjust volume without bubble.</string>
     <string name="desc_night_profile">Lower volume each night automatically.</string>
     <string name="desc_haptic">Short vibration confirms each adjustment.</string>
     <string name="desc_visual_indicator">Show a compact volume pill after changes.</string>

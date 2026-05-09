@@ -22,6 +22,7 @@ public final class ActionManager {
     static final String ACTION_SHOW_BUBBLE_PERMANENT = "com.example.virtualbuttons.ACTION_SHOW_BUBBLE_PERMANENT";
     static final String ACTION_APPLY_NIGHT_PROFILE = "com.example.virtualbuttons.ACTION_APPLY_NIGHT_PROFILE";
     static final String ACTION_VOLUME_CHANGED = "com.example.virtualbuttons.ACTION_VOLUME_CHANGED";
+    static final String ACTION_DISMISS_NOTIFICATION = "com.example.virtualbuttons.ACTION_DISMISS_NOTIFICATION";
 
     private ActionManager() {}
 
@@ -58,8 +59,19 @@ public final class ActionManager {
         context.startService(intent);
     }
 
+    static void startBackground(Context context) {
+        Intent intent = new Intent(context, FloatingVolumeService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
+        else context.startService(intent);
+    }
+
     static void refreshService(Context context) {
         Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_REFRESH);
+        context.startService(intent);
+    }
+
+    static void stopFloatingService(Context context) {
+        Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_STOP);
         context.startService(intent);
     }
 }

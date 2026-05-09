@@ -43,6 +43,10 @@ final class SettingsStore {
     int nightStartHour() { return prefs.getInt("night_start", 22); }
     int nightEndHour() { return prefs.getInt("night_end", 7); }
     boolean startOnBoot() { return prefs.getBoolean("start_on_boot", true); }
+    boolean hideNotification() { return prefs.getBoolean("hide_notification", false); }
+    void setHideNotification(boolean hide) { prefs.edit().putBoolean("hide_notification", hide).apply(); }
+    boolean backgroundRunning() { return prefs.getBoolean("background_running", false); }
+    void setBackgroundRunning(boolean running) { prefs.edit().putBoolean("background_running", running).apply(); }
     int lastAudibleMedia() { return prefs.getInt("last_audible_media", -1); }
     void setLastAudibleMedia(int value) { prefs.edit().putInt("last_audible_media", value).apply(); }
     int preNightVolume() { return prefs.getInt("pre_night_volume", -1); }
