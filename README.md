@@ -48,7 +48,11 @@ gradle :app:assembleDebug
 
 ## Download APK
 
-**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/download/latest/VirtualButtons.apk)** — latest build
+### Latest Release
+- **[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest)** — latest stable build
+
+### All Releases
+Visit the **[Releases page](https://github.com/RG-Builder/Virtual-buttons/releases)** for version history and older builds.
 
 On first install, Android may warn about unknown sources — tap Allow and reopen the APK.
 
@@ -56,7 +60,14 @@ On first install, Android may warn about unknown sources — tap Allow and reope
 
 ## Release History
 
-### latest (v1.0.2)
+### latest (v1.0.3)
+- **Gesture controls**: improved swipe/double-tap detection and sensitivity
+- **Edge gestures**: enhanced vertical drag threshold calculation
+- **Bubble state**: better reappear after hide, permanent pin, auto-hide scheduling
+- **Settings UI**: gesture mode spinner, edge strip width, shake sensitivity controls
+- Full changelog on [Releases page](https://github.com/RG-Builder/Virtual-buttons/releases)
+
+### v1.0.2
 - **Gesture controls fixed**: bubble swipe and edge gesture detection
 - **Bubble state fixed**: reappears after hide, permanent pin, auto-hide scheduling
 - **Background running**: service keeps running without bubble, tile toggles visibility

@@ -15,6 +15,8 @@ final class VolumeController {
         this.context = context.getApplicationContext();
     }
 
+    boolean isAvailable() { return audioManager != null; }
+
     int resolveStream() {
         SettingsStore.StreamMode mode = settings.streamMode();
         if (mode == SettingsStore.StreamMode.MEDIA) return AudioManager.STREAM_MUSIC;

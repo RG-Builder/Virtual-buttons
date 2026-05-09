@@ -197,7 +197,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
     private void addControls() {
         content.addView(section(getString(R.string.section_gestures)));
-        addSpinnerDesc(getString(R.string.gesture_type_title), getString(R.string.gesture_type_desc), new String[]{getString(R.string.gesture_both), getString(R.string.gesture_swipe), getString(R.string.gesture_double_tap)}, settings.gestureMode().name(), v -> settings.putString("gesture_mode", v));
+        addSpinnerDesc(getString(R.string.gesture_type_title), getString(R.string.gesture_type_desc), new String[]{getString(R.string.gesture_both), getString(R.string.gesture_swipe), getString(R.string.gesture_double_tap)}, gestureModeToLabel(settings.gestureMode()), v -> settings.putString("gesture_mode", gestureModeToEnum(v)));
         addSeek(getString(R.string.gesture_sensitivity), getString(R.string.unit_dp), 16, 96, settings.gestureSensitivity(), v -> { settings.putInt("gesture_sensitivity", v); restartIfRunning(); });
         addCheck(getString(R.string.desc_edge_gestures), "", settings.edgeGestures(), (b, c) -> restartable("edge_gestures", c));
         addSeek(getString(R.string.edge_strip_width), getString(R.string.unit_dp), 4, 24, settings.edgeWidthDp(), v -> restartable("edge_width", v));
@@ -272,6 +272,18 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         if (v.equals(getString(R.string.stream_media))) return "MEDIA";
         if (v.equals(getString(R.string.stream_system))) return "SYSTEM";
         return "ACTIVE";
+    }
+
+    private String gestureModeToLabel(SettingsStore.GestureMode m) {
+        if (m == SettingsStore.GestureMode.SWIPE) return getString(R.string.gesture_swipe);
+        if (m == SettingsStore.GestureMode.DOUBLE_TAP) return getString(R.string.gesture_double_tap);
+        return getString(R.string.gesture_both);
+    }
+
+    private String gestureModeToEnum(String v) {
+        if (v.equals(getString(R.string.gesture_swipe))) return "SWIPE";
+        if (v.equals(getString(R.string.gesture_double_tap))) return "DOUBLE_TAP";
+        return "BOTH";
     }
 
     private void addColorPicker() {

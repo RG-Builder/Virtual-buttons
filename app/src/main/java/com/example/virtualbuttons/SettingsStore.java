@@ -22,7 +22,7 @@ final class SettingsStore {
     int buttonSizeDp() { return prefs.getInt("button_size", 64); }
     int buttonOpacity() { return prefs.getInt("button_opacity", 86); }
     int volumeStep() { return prefs.getInt("volume_step", 1); }
-    int gestureSensitivity() { return prefs.getInt("gesture_sensitivity", 36); }
+    int gestureSensitivity() { return prefs.getInt("gesture_sensitivity", 24); }
     GestureMode gestureMode() {
         try { return GestureMode.valueOf(prefs.getString("gesture_mode", GestureMode.BOTH.name())); }
         catch (Exception e) { return GestureMode.BOTH; }
