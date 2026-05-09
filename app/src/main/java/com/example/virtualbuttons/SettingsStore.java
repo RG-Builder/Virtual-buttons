@@ -23,8 +23,14 @@ final class SettingsStore {
     int buttonOpacity() { return prefs.getInt("button_opacity", 86); }
     int volumeStep() { return prefs.getInt("volume_step", 1); }
     int gestureSensitivity() { return prefs.getInt("gesture_sensitivity", 36); }
-    GestureMode gestureMode() { return GestureMode.valueOf(prefs.getString("gesture_mode", GestureMode.BOTH.name())); }
-    StreamMode streamMode() { return StreamMode.valueOf(prefs.getString("stream_mode", StreamMode.ACTIVE.name())); }
+    GestureMode gestureMode() {
+        try { return GestureMode.valueOf(prefs.getString("gesture_mode", GestureMode.BOTH.name())); }
+        catch (Exception e) { return GestureMode.BOTH; }
+    }
+    StreamMode streamMode() {
+        try { return StreamMode.valueOf(prefs.getString("stream_mode", StreamMode.ACTIVE.name())); }
+        catch (Exception e) { return StreamMode.ACTIVE; }
+    }
     boolean edgeGestures() { return prefs.getBoolean("edge_gestures", true); }
     int edgeWidthDp() { return prefs.getInt("edge_width", 12); }
     boolean shakeToMute() { return prefs.getBoolean("shake_to_mute", false); }

@@ -33,8 +33,17 @@ final class AutoProfileScheduler {
         LocalDateTime nextStart = now.withHour(startHour).withMinute(0).withSecond(0).withNano(0);
         if (!nextStart.isAfter(now)) nextStart = nextStart.plusDays(1);
 
-        LocalDateTime nextEnd = now.withHour(endHour).withMinute(0).withSecond(0).withNano(0);
-        if (!nextEnd.isAfter(now)) nextEnd = nextEnd.plusDays(1);
+        LocalDateTime nextEnd;
+        boolean sameDayCrossing = startHour > endHour && now.getHour() < startHour;
+        if (sameDayCrossing) {
+            nextEnd = now.withHour(endHour).withMinute(0).withSecond(0).withNano(0);
+            if (!nextEnd.isAfter(now)) nextEnd = nextEnd.plusDays(1);
+        } else {
+            nextEnd = now.withHour(endHour).withMinute(0).withSecond(0).withNano(0);
+            if (!nextEnd.isAfter(now)) nextEnd = nextEnd.plusDays(1);
+            if (startHour > endHour && nextEnd.isAfter(nextStart)) nextEnd = nextEnd.minusDays(1);
+            else if (startHour <= endHour && nextEnd.isBefore(nextStart)) nextEnd = nextEnd.plusDays(1);
+        }
 
         PendingIntent nightStartIntent = PendingIntent.getBroadcast(context, NIGHT_START_REQUEST,
             new Intent(context, ProfileReceiver.class).setAction(ActionManager.ACTION_APPLY_NIGHT_PROFILE),

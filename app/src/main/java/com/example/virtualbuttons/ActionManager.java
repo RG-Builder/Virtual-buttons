@@ -1,5 +1,6 @@
 package com.example.virtualbuttons;
 
+import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
@@ -20,6 +21,7 @@ public final class ActionManager {
     static final String ACTION_RESTORE_DAY_PROFILE = "com.example.virtualbuttons.ACTION_RESTORE_DAY_PROFILE";
     static final String ACTION_SHOW_BUBBLE_PERMANENT = "com.example.virtualbuttons.ACTION_SHOW_BUBBLE_PERMANENT";
     static final String ACTION_APPLY_NIGHT_PROFILE = "com.example.virtualbuttons.ACTION_APPLY_NIGHT_PROFILE";
+    static final String ACTION_VOLUME_CHANGED = "com.example.virtualbuttons.ACTION_VOLUME_CHANGED";
 
     private ActionManager() {}
 
@@ -29,6 +31,20 @@ public final class ActionManager {
             channel.setDescription("Persistent controls for the virtual volume button");
             context.getSystemService(NotificationManager.class).createNotificationChannel(channel);
         }
+    }
+
+    static Intent overlaySettingsIntent(Context context) {
+        return new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.getPackageName()));
+    }
+
+    static Intent exactAlarmIntent(Context context) {
+        return new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + context.getPackageName()));
+    }
+
+    static boolean canScheduleExactAlarms(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        return am != null && am.canScheduleExactAlarms();
     }
 
     static void startFloatingService(Context context) {
@@ -45,9 +61,5 @@ public final class ActionManager {
     static void refreshService(Context context) {
         Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_REFRESH);
         context.startService(intent);
-    }
-
-    static Intent overlaySettingsIntent(Context context) {
-        return new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.getPackageName()));
     }
 }

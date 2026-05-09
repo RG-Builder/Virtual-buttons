@@ -13,6 +13,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.os.Handler;
+import android.os.Looper;
 import android.speech.tts.TextToSpeech;
 import android.view.HapticFeedbackConstants;
 import android.view.animation.AccelerateDecelerateInterpolator;
@@ -68,7 +70,10 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
     @Override protected void onResume() { super.onResume(); refreshStatus(); }
 
-    @Override protected void onDestroy() { if (tts != null) tts.shutdown(); super.onDestroy(); }
+    @Override protected void onDestroy() {
+        if (animateEntranceHandler != null && animateEntranceRunnable != null) animateEntranceHandler.removeCallbacks(animateEntranceRunnable);
+        if (tts != null) tts.shutdown(); super.onDestroy();
+    }
 
     private int primary() { return darkMode ? getColor(R.color.vb_primary_dark) : getColor(R.color.vb_primary); }
     private int bg() { return darkMode ? getColor(R.color.vb_bg_dark) : getColor(R.color.vb_surface); }
@@ -82,15 +87,23 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private int statusErrorBg() { return darkMode ? getColor(R.color.vb_status_error_bg_dark) : getColor(R.color.vb_status_error_bg); }
     private int statusErrorText() { return darkMode ? getColor(R.color.vb_status_error_dark) : getColor(R.color.vb_error); }
 
+    private Handler animateEntranceHandler;
+    private Runnable animateEntranceRunnable;
+
     private void animateEntrance() {
-        content.postDelayed(() -> {
-            for (int i = 1; i < content.getChildCount(); i++) {
-                View child = content.getChildAt(i);
-                child.setTranslationY(80f);
-                child.setAlpha(0f);
-                child.animate().translationY(0f).alpha(1f).setDuration(400).setStartDelay(i * 60L).setInterpolator(DECEL).start();
+        animateEntranceHandler = new Handler(Looper.getMainLooper());
+        animateEntranceRunnable = new Runnable() {
+            @Override public void run() {
+                if (content == null) return;
+                for (int i = 1; i < content.getChildCount(); i++) {
+                    View child = content.getChildAt(i);
+                    child.setTranslationY(80f);
+                    child.setAlpha(0f);
+                    child.animate().translationY(0f).alpha(1f).setDuration(400).setStartDelay(i * 60L).setInterpolator(DECEL).start();
+                }
             }
-        }, 50);
+        };
+        animateEntranceHandler.postDelayed(animateEntranceRunnable, 50);
     }
 
     private void buildUi() {
@@ -184,31 +197,37 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
     private void addControls() {
         content.addView(section(getString(R.string.section_gestures)));
-        addSpinnerDesc(getString(R.string.gesture_type_title), getString(R.string.gesture_type_desc), new String[]{"BOTH", "SWIPE", "DOUBLE_TAP"}, settings.gestureMode().name(), v -> settings.putString("gesture_mode", v));
-        addSeek("Gesture sensitivity", "dp", 16, 96, settings.gestureSensitivity(), v -> { settings.putInt("gesture_sensitivity", v); restartIfRunning(); });
+        addSpinnerDesc(getString(R.string.gesture_type_title), getString(R.string.gesture_type_desc), new String[]{getString(R.string.gesture_both), getString(R.string.gesture_swipe), getString(R.string.gesture_double_tap)}, settings.gestureMode().name(), v -> settings.putString("gesture_mode", v));
+        addSeek(getString(R.string.gesture_sensitivity), getString(R.string.unit_dp), 16, 96, settings.gestureSensitivity(), v -> { settings.putInt("gesture_sensitivity", v); restartIfRunning(); });
         addCheck(getString(R.string.desc_edge_gestures), "", settings.edgeGestures(), (b, c) -> restartable("edge_gestures", c));
-        addSeek("Edge strip width", "dp", 4, 24, settings.edgeWidthDp(), v -> restartable("edge_width", v));
-        addCheck("Shake to mute", "", settings.shakeToMute(), (b, c) -> restartable("shake_to_mute", c));
-        addSeek(getString(R.string.shake_sensitivity), "threshold", 150, 400, settings.shakeThreshold(), v -> { settings.putInt("shake_threshold", v); restartIfRunning(); });
+        addSeek(getString(R.string.edge_strip_width), getString(R.string.unit_dp), 4, 24, settings.edgeWidthDp(), v -> restartable("edge_width", v));
+        addCheck(getString(R.string.shake_to_mute), "", settings.shakeToMute(), (b, c) -> restartable("shake_to_mute", c));
+        addSeek(getString(R.string.shake_sensitivity), getString(R.string.unit_threshold), 150, 400, settings.shakeThreshold(), v -> { settings.putInt("shake_threshold", v); restartIfRunning(); });
 
         content.addView(section(getString(R.string.section_floating_button)));
-        addSeek("Button size", "dp", 44, 112, settings.buttonSizeDp(), v -> restartable("button_size", v));
-        addSeek("Button opacity", "%", 30, 100, settings.buttonOpacity(), v -> restartable("button_opacity", v));
+        addSeek(getString(R.string.button_size), getString(R.string.unit_dp), 44, 112, settings.buttonSizeDp(), v -> restartable("button_size", v));
+        addSeek(getString(R.string.button_opacity), getString(R.string.unit_percent), 30, 100, settings.buttonOpacity(), v -> restartable("button_opacity", v));
         addColorPicker();
 
         content.addView(section(getString(R.string.section_volume_behavior)));
-        addSeek("Volume step", "", 1, 5, settings.volumeStep(), v -> settings.putInt("volume_step", v));
-        addSpinnerDesc(getString(R.string.controlled_stream_title), getString(R.string.stream_desc), new String[]{getString(R.string.stream_active), getString(R.string.stream_media), getString(R.string.stream_system)}, streamLabelToMode(settings.streamMode()), v -> settings.putString("stream_mode", streamModeToLabel(v)));
+        addSeek(getString(R.string.volume_step), "", 1, 5, settings.volumeStep(), v -> settings.putInt("volume_step", v));
+        addSpinnerDesc(getString(R.string.controlled_stream_title), getString(R.string.stream_desc), new String[]{getString(R.string.stream_active), getString(R.string.stream_media), getString(R.string.stream_system)}, streamModeToLabel(settings.streamMode()), v -> settings.putString("stream_mode", streamModeToEnum(v)));
         addCheck(getString(R.string.desc_haptic), "", settings.haptics(), (b, c) -> settings.putBoolean("haptics", c));
         addCheck(getString(R.string.desc_visual_indicator), "", settings.visualIndicator(), (b, c) -> settings.putBoolean("visual_indicator", c));
         addCheck(getString(R.string.accessibility_title), getString(R.string.accessibility_desc), settings.accessibilitySpeech(), (b, c) -> settings.putBoolean("accessibility_speech", c));
 
         content.addView(section(getString(R.string.section_reliability)));
         addCheck(getString(R.string.desc_start_on_boot), "", settings.startOnBoot(), (b, c) -> settings.putBoolean("start_on_boot", c));
-        addCheck(getString(R.string.desc_night_profile), "", settings.autoNightProfile(), (b, c) -> { settings.putBoolean("auto_night_profile", c); AutoProfileScheduler.schedule(this); });
-        addSeek("Night volume", "%", 0, 60, settings.nightVolumePercent(), v -> settings.putInt("night_volume", v));
-        addSeek("Night starts", ":00", 18, 23, settings.nightStartHour(), v -> { settings.putInt("night_start", v); AutoProfileScheduler.schedule(this); });
-        addSeek("Night ends", ":00", 4, 10, settings.nightEndHour(), v -> { settings.putInt("night_end", v); AutoProfileScheduler.schedule(this); });
+        addCheck(getString(R.string.desc_night_profile), "", settings.autoNightProfile(), (b, c) -> {
+            if (c && !ActionManager.canScheduleExactAlarms(this)) {
+                startActivity(ActionManager.exactAlarmIntent(this));
+            }
+            settings.putBoolean("auto_night_profile", c);
+            AutoProfileScheduler.schedule(this);
+        });
+        addSeek(getString(R.string.night_volume), getString(R.string.unit_percent), 0, 60, settings.nightVolumePercent(), v -> settings.putInt("night_volume", v));
+        addSeek(getString(R.string.night_starts), getString(R.string.unit_hour), 18, 23, settings.nightStartHour(), v -> { settings.putInt("night_start", v); AutoProfileScheduler.schedule(this); });
+        addSeek(getString(R.string.night_ends), getString(R.string.unit_hour), 4, 10, settings.nightEndHour(), v -> { settings.putInt("night_end", v); AutoProfileScheduler.schedule(this); });
 
         content.addView(section(getString(R.string.preset_title)));
         addPresetButtons();
@@ -232,12 +251,12 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
             .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(100).start()).start();
     }
 
-    private String streamLabelToMode(SettingsStore.StreamMode m) {
+    private String streamModeToLabel(SettingsStore.StreamMode m) {
         if (m == SettingsStore.StreamMode.MEDIA) return getString(R.string.stream_media);
         if (m == SettingsStore.StreamMode.SYSTEM) return getString(R.string.stream_system);
         return getString(R.string.stream_active);
     }
-    private String streamModeToLabel(String v) {
+    private String streamModeToEnum(String v) {
         if (v.equals(getString(R.string.stream_media))) return "MEDIA";
         if (v.equals(getString(R.string.stream_system))) return "SYSTEM";
         return "ACTIVE";
@@ -292,7 +311,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
-        String[] names = {"Silent", "Normal", "Vibrate"};
+        String[] names = {getString(R.string.preset_silent), getString(R.string.preset_normal), getString(R.string.preset_vibrate)};
         int[] vals = {0, -2, -1};
         for (int i = 0; i < names.length; i++) {
             Button btn = new Button(this);
@@ -307,7 +326,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                 int max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
                 if (target == -1) { new VolumeController(this, settings).muteOrRestoreMedia(); }
                 else { am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target == -2 ? Math.round(max * 0.5f) : target, 0); }
-                if (settings.accessibilitySpeech() && ttsReady) tts.speak("Preset: " + name, TextToSpeech.QUEUE_FLUSH, null, "preset");
+                if (settings.accessibilitySpeech() && ttsReady) tts.speak(String.format(getString(R.string.preset_applied), name), TextToSpeech.QUEUE_FLUSH, null, "preset");
                 v.animate().scaleX(1.15f).scaleY(1.15f).setDuration(150).setInterpolator(OVERSHOOT)
                     .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(100).start()).start();
             });

@@ -77,4 +77,20 @@
     <string name="widget_vol_down">Volume down</string>
     <string name="widget_mute">Mute</string>
     <string name="section_settings">Settings</string>
+    <string name="gesture_sensitivity">Gesture sensitivity</string>
+    <string name="shake_to_mute">Shake to mute</string>
+    <string name="button_size">Button size</string>
+    <string name="button_opacity">Button opacity</string>
+    <string name="edge_strip_width">Edge strip width</string>
+    <string name="volume_step">Volume step</string>
+    <string name="night_volume">Night volume</string>
+    <string name="night_starts">Night starts</string>
+    <string name="preset_applied">Preset: %s</string>
+    <string name="gesture_both">Both</string>
+    <string name="gesture_swipe">Swipe</string>
+    <string name="gesture_double_tap">Double-tap</string>
+    <string name="unit_dp">dp</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_threshold">threshold</string>
+    <string name="unit_hour">:00</string>
 </resources>

@@ -1,15 +1,18 @@
 package com.example.virtualbuttons;
 
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioManager;
 
 final class VolumeController {
     private final AudioManager audioManager;
     private final SettingsStore settings;
+    private final Context context;
 
     VolumeController(Context context, SettingsStore settings) {
         audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         this.settings = settings;
+        this.context = context.getApplicationContext();
     }
 
     int resolveStream() {
@@ -25,6 +28,7 @@ final class VolumeController {
         int current = audioManager.getStreamVolume(stream);
         int next = clamp(current + steps, 0, audioManager.getStreamMaxVolume(stream));
         audioManager.setStreamVolume(stream, next, 0);
+        context.sendBroadcast(new Intent(ActionManager.ACTION_VOLUME_CHANGED));
         return state(stream);
     }
 
@@ -38,6 +42,7 @@ final class VolumeController {
             int restore = settings.lastAudibleMedia() > 0 ? settings.lastAudibleMedia() : Math.max(1, audioManager.getStreamMaxVolume(stream) / 2);
             audioManager.setStreamVolume(stream, restore, 0);
         }
+        context.sendBroadcast(new Intent(ActionManager.ACTION_VOLUME_CHANGED));
         return state(stream);
     }
 
@@ -47,6 +52,7 @@ final class VolumeController {
         int target = clamp(Math.round(max * settings.nightVolumePercent() / 100f), 0, max);
         settings.setPreNightVolume(audioManager.getStreamVolume(stream));
         audioManager.setStreamVolume(stream, target, 0);
+        context.sendBroadcast(new Intent(ActionManager.ACTION_VOLUME_CHANGED));
         return state(stream);
     }
 
@@ -56,6 +62,7 @@ final class VolumeController {
         int current = audioManager.getStreamVolume(stream);
         int restore = preNight >= 0 ? preNight : current;
         audioManager.setStreamVolume(stream, restore, 0);
+        context.sendBroadcast(new Intent(ActionManager.ACTION_VOLUME_CHANGED));
         return state(stream);
     }
 

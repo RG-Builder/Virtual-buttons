@@ -53,6 +53,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private final Runnable hideBubbleRunnable = () -> hideBubble(false);
     private boolean bubbleVisible = false;
     private boolean bubblePinned = false;
+    private boolean adjustDebounce = false;
     private WindowManager.LayoutParams bubbleLp;
     private TextToSpeech tts;
     private boolean ttsReady = false;
@@ -256,14 +257,18 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     }
 
     private void adjust(int direction) {
+        if (adjustDebounce) return;
+        adjustDebounce = true;
         VolumeController.VolumeState state = volumeController.changeBySteps(direction);
         speakVolume(state);
         pulseBubble();
         show(state);
+        handler.postDelayed(() -> adjustDebounce = false, 120);
     }
 
     private void pulseBubble() {
         if (bubble == null || bubble.getParent() == null) return;
+        bubble.animate().cancel();
         AnimatorSet set = new AnimatorSet();
         set.playTogether(
             ObjectAnimator.ofFloat(bubble, "scaleX", 1f, 1.15f, 0.94f, 1.04f, 1f),
@@ -437,14 +442,22 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     float dx = event.getRawX() - downRawX;
                     float dy = event.getRawY() - downRawY;
                     if (Math.hypot(dx, dy) > dp(4)) { didMove = true; v.removeCallbacks(longPressCheck); }
-                    if (didMove) { lp.x = Math.round(downX + dx); lp.y = Math.round(downY + dy); if (windowManager != null) windowManager.updateViewLayout(bubble, lp); }
+                    if (didMove) {
+                        int displayW = windowManager.getDefaultDisplay().getWidth();
+                        int displayH = windowManager.getDefaultDisplay().getHeight();
+                        int bubbleW = bubble != null ? bubble.getWidth() : settings.buttonSizeDp();
+                        int bubbleH = bubble != null ? bubble.getHeight() : settings.buttonSizeDp();
+                        lp.x = Math.round(Math.max(0, Math.min(displayW - bubbleW, downX + dx)));
+                        lp.y = Math.round(Math.max(0, Math.min(displayH - bubbleH, downY + dy)));
+                        if (windowManager != null) windowManager.updateViewLayout(bubble, lp);
+                    }
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     v.removeCallbacks(longPressCheck);
                     float fdx = event.getRawX() - downRawX;
                     float fdy = event.getRawY() - downRawY;
-                    boolean moved = Math.hypot(fdx, fdy) > dp(settings.gestureSensitivity());
+                    boolean moved = Math.hypot(fdx, fdy) > gestureThreshold();
                     long now = System.currentTimeMillis();
                     if (moved && allowsSwipe()) {
                         handler.removeCallbacks(singleTapRunnable);
@@ -477,6 +490,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         };
         private boolean allowsSwipe() { return settings.gestureMode() != SettingsStore.GestureMode.DOUBLE_TAP; }
         private boolean allowsDoubleTap() { return settings.gestureMode() != SettingsStore.GestureMode.SWIPE; }
+        private int gestureThreshold() { return dp(settings.gestureSensitivity()); }
     }
 
     private final class EdgeTouch implements View.OnTouchListener {
@@ -498,6 +512,9 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     showEdgeTrail(sign > 0 ? rightTrail : leftTrail, downY, dy);
                     adjust(dy < 0 ? 1 : -1);
                 }
+                return true;
+            }
+            if (action == MotionEvent.ACTION_CANCEL) {
                 return true;
             }
             return true;
