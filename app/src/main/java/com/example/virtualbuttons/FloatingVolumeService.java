@@ -505,7 +505,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     long now = System.currentTimeMillis();
                     if (moved && allowsSwipe()) {
                         handler.removeCallbacks(singleTapRunnable);
-                        int dir = fdy < 0 ? 1 : -1;
+                        int dir = fdy > 0 ? 1 : -1;
                         adjust(dir);
                     } else if (allowsDoubleTap() && now - lastTap < 330) {
                         handler.removeCallbacks(singleTapRunnable);
