@@ -14,8 +14,14 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.view.HapticFeedbackConstants;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.view.Gravity;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.TranslateAnimation;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -34,6 +40,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private boolean darkMode;
     private TextToSpeech tts;
     private boolean ttsReady = false;
+    private ScrollView scrollView;
 
     private static final int COLOR_PRIMARY = Color.rgb(103, 80, 164);
     private static final int COLOR_PRIMARY_DARK = Color.rgb(69, 49, 120);
@@ -43,6 +50,9 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private static final int COLOR_TEXT_DARK = Color.rgb(240, 238, 245);
     private static final int COLOR_TEXT_SEC_DARK = Color.rgb(160, 158, 170);
     private static final int COLOR_BG_DARK = Color.rgb(12, 12, 16);
+    private static final DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
+    private static final OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.4f);
+    private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         settings = new SettingsStore(this);
@@ -51,6 +61,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         super.onCreate(savedInstanceState);
         tts = new TextToSpeech(this, this);
         buildUi();
+        animateEntrance();
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5);
         }
@@ -83,15 +94,32 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private int primaryColor() { return COLOR_PRIMARY; }
     private int cardBgColor() { return darkMode ? Color.rgb(255, 255, 255) : Color.WHITE; }
 
+    private void animateEntrance() {
+        content.postDelayed(() -> {
+            for (int i = 1; i < content.getChildCount(); i++) {
+                View child = content.getChildAt(i);
+                child.setTranslationY(80f);
+                child.setAlpha(0f);
+                child.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(400)
+                    .setStartDelay(i * 60L)
+                    .setInterpolator(DECEL)
+                    .start();
+            }
+        }, 50);
+    }
+
     private void buildUi() {
-        ScrollView scroll = new ScrollView(this);
+        scrollView = new ScrollView(this);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(20);
         content.setPadding(pad, pad, pad, pad);
         content.setBackgroundColor(bgColor());
-        scroll.addView(content);
-        setContentView(scroll);
+        scrollView.addView(content);
+        setContentView(scrollView);
 
         addHeader();
         addSpacer(8);
@@ -102,6 +130,8 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private void addHeader() {
         TextView title = text("Virtual Buttons", 30, true);
         title.setLetterSpacing(0.02f);
+        title.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(0);
+
         TextView subtitle = text("Fast software controls for broken or hard-to-reach volume buttons.", 16, false);
         subtitle.setTextColor(textSecColor());
         subtitle.setLineSpacing(dp(4), 1f);
@@ -170,6 +200,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
         primary.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            animatePress(v);
             if (!Settings.canDrawOverlays(this)) {
                 startActivity(ActionManager.overlaySettingsIntent(this));
             } else {
@@ -182,6 +213,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
         stop.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            animatePress(v);
             settings.setOverlayEnabled(false);
             stopService(new Intent(this, FloatingVolumeService.class));
             refreshStatus();
@@ -192,6 +224,9 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         card.addView(btnRow);
         content.addView(card, Math.min(2, content.getChildCount()));
         content.setTag(card);
+
+        card.setScaleX(0.9f); card.setScaleY(0.9f); card.setAlpha(0f);
+        card.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(300).setInterpolator(OVERSHOOT).start();
     }
 
     private void checkBatteryOptimization() {
@@ -218,7 +253,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         addColorPicker();
 
         content.addView(section(getString(R.string.section_volume_behavior)));
-        addSeek("Volume step", value -> settings.putInt("volume_step", value));
+        addSeekDesc("Volume step", "", 1, 5, settings.volumeStep(), value -> settings.putInt("volume_step", value));
         addSpinnerDesc(getString(R.string.controlled_stream_title), getString(R.string.stream_desc),
             new String[]{getString(R.string.stream_active), getString(R.string.stream_media), getString(R.string.stream_system)},
             streamLabelToMode(settings.streamMode()),
@@ -240,6 +275,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         content.addView(section("Settings"));
         addCheck(getString(R.string.dark_mode), getString(R.string.dark_mode_desc), settings.darkMode(), (b, c) -> {
             settings.setDarkMode(c);
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
             recreate();
         });
         addButtonCard(getString(R.string.training_title), "Test your gestures in real time.", v -> startActivity(new Intent(this, TrainingActivity.class)));
@@ -252,6 +288,15 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         footer.setPadding(0, dp(24), 0, dp(8));
         footer.setGravity(Gravity.CENTER_HORIZONTAL);
         content.addView(footer);
+    }
+
+    private void animatePress(View v) {
+        v.animate()
+            .scaleX(0.92f).scaleY(0.92f)
+            .setDuration(80)
+            .setInterpolator(ACCEL_DECEL)
+            .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(100).start())
+            .start();
     }
 
     private String streamLabelToMode(SettingsStore.StreamMode mode) {
@@ -295,11 +340,14 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
             bg.setCornerRadius(dp(20));
             bg.setColor(Color.HSVToColor(new float[]{hue, 0.3f, 0.9f}));
             colorBtn.setBackground(bg);
-            int finalI = i;
             colorBtn.setOnClickListener(v -> {
+                animatePress(v);
                 settings.putInt("bubble_color_hue", hue);
                 colorVal.setTextColor(Color.HSVToColor(new float[]{hue, 0.65f, 0.85f}));
                 restartIfRunning();
+                v.animate().scaleX(1.3f).scaleY(1.3f).setDuration(100).setInterpolator(OVERSHOOT)
+                    .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(80).start())
+                    .start();
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(36), dp(36));
             lp.setMargins(dp(4), dp(8), dp(4), dp(8));
@@ -325,6 +373,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
             presetBtn.setTextSize(13);
             int idx = i;
             presetBtn.setOnClickListener(v -> {
+                animatePress(v);
                 int target = presetValues[idx];
                 VolumeController vc = new VolumeController(this, settings);
                 if (target == -1) {
@@ -338,6 +387,9 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                 if (settings.accessibilitySpeech() && ttsReady) {
                     tts.speak("Preset applied: " + presets[idx], TextToSpeech.QUEUE_FLUSH, null, "preset");
                 }
+                v.animate().scaleX(1.15f).scaleY(1.15f).setDuration(150).setInterpolator(OVERSHOOT)
+                    .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(100).start())
+                    .start();
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(44), 1f);
             lp.setMargins(dp(4), 0, dp(4), 0);
@@ -355,7 +407,10 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         btn.setAllCaps(false);
         btn.setTextSize(14);
         btn.setTextColor(Color.WHITE);
-        btn.setOnClickListener(listener);
+        btn.setOnClickListener(v -> {
+            animatePress(v);
+            listener.onClick(v);
+        });
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(primaryColor());
         bg.setCornerRadius(dp(12));
@@ -439,9 +494,11 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         header.addView(new SpaceView(this), new LinearLayout.LayoutParams(0, 1, 1f));
         header.addView(value);
         card.addView(header);
-        TextView descView = text(desc, 12, false);
-        descView.setTextColor(textSecColor());
-        card.addView(descView);
+        if (!desc.isEmpty()) {
+            TextView descView = text(desc, 12, false);
+            descView.setTextColor(textSecColor());
+            card.addView(descView);
+        }
         SeekBar seek = new SeekBar(this);
         seek.setMax(max - min);
         seek.setProgress(current - min);
@@ -454,10 +511,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         ));
         card.addView(seek);
         content.addView(card);
-    }
-
-    private void addSeek(String label, IntSetter setter) {
-        addSeekDesc(label, "", 1, 5, settings.volumeStep(), setter);
     }
 
     private void addSpinner(String label, String[] values, String selected, ValueSetter setter) {
@@ -482,7 +535,9 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         box.setTextSize(15);
         box.setTextColor(textColor());
         box.setChecked(checked);
-        box.setOnCheckedChangeListener(listener);
+        box.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            listener.onCheckedChanged(buttonView, isChecked);
+        });
         card.addView(box);
         TextView descView = text(description, 13, false);
         descView.setTextColor(textSecColor());

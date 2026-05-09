@@ -5,27 +5,32 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
-import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.TranslateAnimation;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class TutorialActivity extends Activity {
     private int currentStep = 0;
+    private LinearLayout contentRoot;
+    private TextView stepNum;
+    private TextView titleView;
+    private TextView descView;
     private final TutorialStep[] steps = {
-        new TutorialStep(R.string.tutorial_bubble_title, R.string.tutorial_bubble_detail, "Swipe up \u2191 and down \u2193 to adjust volume.\nDouble-tap to mute.\nLong-press to hide."),
-        new TutorialStep(R.string.tutorial_edge_title, R.string.tutorial_edge_detail, "Swipe from either screen edge for quick volume control."),
-        new TutorialStep(R.string.tutorial_tile_title, R.string.tutorial_tile_detail, "Add \u201cVolume Button\u201d tile to Quick Settings for instant access."),
-        new TutorialStep(R.string.tutorial_shake_title, R.string.tutorial_shake_detail, "Enable \u201cShake to mute\u201d in settings for hands-free control."),
+        new TutorialStep(R.string.tutorial_bubble_title, R.string.tutorial_bubble_detail),
+        new TutorialStep(R.string.tutorial_edge_title, R.string.tutorial_edge_detail),
+        new TutorialStep(R.string.tutorial_tile_title, R.string.tutorial_tile_detail),
+        new TutorialStep(R.string.tutorial_shake_title, R.string.tutorial_shake_detail),
     };
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         currentStep = 0;
-        showStep();
-    }
-
-    private void showStep() {
         setContentView(makeLayout());
     }
 
@@ -37,7 +42,7 @@ public class TutorialActivity extends Activity {
         root.setPadding(pad, pad, pad, pad);
         root.setBackgroundColor(Color.WHITE);
 
-        TextView stepNum = new TextView(this);
+        stepNum = new TextView(this);
         stepNum.setText((currentStep + 1) + " / " + steps.length);
         stepNum.setTextSize(13);
         stepNum.setTextColor(Color.rgb(120, 116, 126));
@@ -49,21 +54,21 @@ public class TutorialActivity extends Activity {
         icon.setGravity(Gravity.CENTER);
         icon.setPadding(0, 0, 0, dp(24));
 
-        TextView title = new TextView(this);
-        title.setText(getString(steps[currentStep].titleRes));
-        title.setTextSize(22);
-        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        title.setTextColor(Color.rgb(29, 27, 32));
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, dp(12));
+        titleView = new TextView(this);
+        titleView.setText(getString(steps[currentStep].titleRes));
+        titleView.setTextSize(22);
+        titleView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        titleView.setTextColor(Color.rgb(29, 27, 32));
+        titleView.setGravity(Gravity.CENTER);
+        titleView.setPadding(0, 0, 0, dp(12));
 
-        TextView desc = new TextView(this);
-        desc.setText(getString(steps[currentStep].descRes));
-        desc.setTextSize(16);
-        desc.setTextColor(Color.rgb(72, 68, 78));
-        desc.setLineSpacing(dp(6), 1f);
-        desc.setGravity(Gravity.CENTER);
-        desc.setPadding(0, 0, 0, dp(32));
+        descView = new TextView(this);
+        descView.setText(getString(steps[currentStep].descRes));
+        descView.setTextSize(16);
+        descView.setTextColor(Color.rgb(72, 68, 78));
+        descView.setLineSpacing(dp(6), 1f);
+        descView.setGravity(Gravity.CENTER);
+        descView.setPadding(0, 0, 0, dp(32));
 
         LinearLayout navRow = new LinearLayout(this);
         navRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -75,8 +80,9 @@ public class TutorialActivity extends Activity {
         Button next = makePrimaryBtn(currentStep < steps.length - 1 ? getString(R.string.tutorial_next) : getString(R.string.tutorial_got_it));
         next.setOnClickListener(v -> {
             if (currentStep < steps.length - 1) {
+                animateToNext();
                 currentStep++;
-                showStep();
+                updateContent();
             } else {
                 finishTutorial(true);
             }
@@ -92,11 +98,42 @@ public class TutorialActivity extends Activity {
 
         root.addView(stepNum);
         root.addView(icon);
-        root.addView(title);
-        root.addView(desc);
+        root.addView(titleView);
+        root.addView(descView);
         root.addView(navRow);
 
+        contentRoot = root;
         return root;
+    }
+
+    private void animateToNext() {
+        DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
+        OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.2f);
+
+        Animation slideLeft = new TranslateAnimation(0, -contentRoot.getWidth(), 0, 0);
+        slideLeft.setDuration(250);
+        slideLeft.setInterpolator(DECEL);
+        Animation fadeOut = new android.view.animation.AlphaAnimation(1f, 0f);
+        fadeOut.setDuration(200);
+
+        Animation slideRight = new TranslateAnimation(contentRoot.getWidth(), 0, 0, 0);
+        slideRight.setDuration(250);
+        slideRight.setInterpolator(DECEL);
+        Animation fadeIn = new android.view.animation.AlphaAnimation(0f, 1f);
+        fadeIn.setDuration(200);
+
+        titleView.startAnimation(slideLeft);
+        descView.startAnimation(fadeOut);
+        titleView.postDelayed(() -> {
+            titleView.startAnimation(slideRight);
+            descView.startAnimation(fadeIn);
+        }, 200);
+    }
+
+    private void updateContent() {
+        stepNum.setText((currentStep + 1) + " / " + steps.length);
+        titleView.setText(getString(steps[currentStep].titleRes));
+        descView.setText(getString(steps[currentStep].descRes));
     }
 
     private Button makeTextBtn(String label) {
@@ -110,6 +147,8 @@ public class TutorialActivity extends Activity {
         bg.setCornerRadius(dp(12));
         bg.setColor(Color.TRANSPARENT);
         btn.setBackground(bg);
+        btn.setOnClickListener(v -> btn.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
+            .withEndAction(() -> btn.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start());
         return btn;
     }
 
@@ -123,6 +162,8 @@ public class TutorialActivity extends Activity {
         bg.setColor(Color.rgb(103, 80, 164));
         bg.setCornerRadius(dp(12));
         btn.setBackground(bg);
+        btn.setOnClickListener(v -> btn.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
+            .withEndAction(() -> btn.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start());
         return btn;
     }
 
@@ -130,6 +171,7 @@ public class TutorialActivity extends Activity {
         if (completed) {
             new SettingsStore(this).setOnboardingDone(true);
         }
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
         finish();
     }
 
@@ -138,7 +180,7 @@ public class TutorialActivity extends Activity {
     private static class TutorialStep {
         final int titleRes;
         final int descRes;
-        TutorialStep(int titleRes, int descRes, String placeholder) {
+        TutorialStep(int titleRes, int descRes) {
             this.titleRes = titleRes;
             this.descRes = descRes;
         }

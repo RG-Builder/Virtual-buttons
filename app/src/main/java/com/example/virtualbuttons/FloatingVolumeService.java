@@ -1,11 +1,18 @@
 package com.example.virtualbuttons;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -23,6 +30,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -34,6 +44,8 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private TextView indicator;
     private View leftEdge;
     private View rightEdge;
+    private View leftTrail;
+    private View rightTrail;
     private SensorManager sensorManager;
     private long lastShake;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -45,6 +57,10 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private TextToSpeech tts;
     private boolean ttsReady = false;
 
+    private static final DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
+    private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
+    private static final OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.8f);
+
     @Override public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
             tts.setLanguage(java.util.Locale.US);
@@ -55,29 +71,56 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     void hideBubble(boolean force) {
         if (!force && bubblePinned) return;
         if (bubble != null && bubble.getParent() != null && windowManager != null) {
-            bubble.animate().scaleX(0.5f).scaleY(0.5f).alpha(0f).setDuration(150).withEndAction(() -> {
-                try { if (windowManager != null) windowManager.removeView(bubble); } catch (Exception ignored) {}
-            }).start();
+            AnimatorSet set = new AnimatorSet();
+            set.playTogether(
+                ObjectAnimator.ofFloat(bubble, "scaleX", 1f, 0.4f),
+                ObjectAnimator.ofFloat(bubble, "scaleY", 1f, 0.4f),
+                ObjectAnimator.ofFloat(bubble, "alpha", 1f, 0f)
+            );
+            set.setDuration(180);
+            set.setInterpolator(DECEL);
+            set.addListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator a) {
+                    try { if (windowManager != null) windowManager.removeView(bubble); } catch (Exception ignored) {}
+                }
+            });
+            set.start();
         }
         bubbleVisible = false;
         bubblePinned = false;
         handler.removeCallbacks(hideBubbleRunnable);
     }
     void hideBubble() { hideBubble(false); }
+
     void showBubble() {
         if (bubble == null) initBubble();
         if (bubble != null && bubble.getParent() == null && windowManager != null) {
             windowManager.addView(bubble, bubbleLp);
-            bubble.setScaleX(0.5f);
-            bubble.setScaleY(0.5f);
-            bubble.setAlpha(0f);
-            bubble.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(200).start();
+            bubble.setScaleX(0f); bubble.setScaleY(0f); bubble.setAlpha(0f);
+            bubble.setVisibility(View.VISIBLE);
+            AnimatorSet set = new AnimatorSet();
+            set.playTogether(
+                ObjectAnimator.ofFloat(bubble, "scaleX", 0f, 1.12f, 1f),
+                ObjectAnimator.ofFloat(bubble, "scaleY", 0f, 1.12f, 1f),
+                ObjectAnimator.ofFloat(bubble, "alpha", 0f, 1f)
+            );
+            set.setDuration(320);
+            set.setInterpolator(OVERSHOOT);
+            set.start();
         }
         bubbleVisible = true;
         if (!bubblePinned) scheduleAutoHide();
     }
-    void refreshEdgeGestures() { remove(leftEdge); remove(rightEdge); if (Settings.canDrawOverlays(this)) addEdgeGestures(); }
-    private void scheduleAutoHide() { handler.removeCallbacks(hideBubbleRunnable); handler.postDelayed(hideBubbleRunnable, 8000); }
+
+    void refreshEdgeGestures() {
+        remove(leftEdge); remove(rightEdge); remove(leftTrail); remove(rightTrail);
+        if (Settings.canDrawOverlays(this)) addEdgeGestures();
+    }
+
+    private void scheduleAutoHide() {
+        handler.removeCallbacks(hideBubbleRunnable);
+        handler.postDelayed(hideBubbleRunnable, 8000);
+    }
 
     @Override public void onCreate() {
         super.onCreate();
@@ -128,10 +171,8 @@ public class FloatingVolumeService extends Service implements SensorEventListene
 
     @Override public void onDestroy() {
         if (tts != null) { tts.stop(); tts.shutdown(); }
-        remove(bubble);
-        remove(indicator);
-        remove(leftEdge);
-        remove(rightEdge);
+        remove(bubble); remove(indicator); remove(leftEdge); remove(rightEdge);
+        remove(leftTrail); remove(rightTrail);
         handler.removeCallbacks(singleTapRunnable);
         handler.removeCallbacks(hideIndicator);
         if (sensorManager != null) sensorManager.unregisterListener(this);
@@ -167,15 +208,34 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         if (!settings.edgeGestures()) return;
         leftEdge = edgeView(-1);
         rightEdge = edgeView(1);
+        leftTrail = trailView();
+        rightTrail = trailView();
         int width = dp(settings.edgeWidthDp());
         WindowManager.LayoutParams left = baseParams(width, -1);
         left.gravity = Gravity.START | Gravity.TOP;
         WindowManager.LayoutParams right = baseParams(width, -1);
         right.gravity = Gravity.END | Gravity.TOP;
+        WindowManager.LayoutParams trailLeft = baseParams(width, -1);
+        trailLeft.gravity = Gravity.START | Gravity.TOP;
+        WindowManager.LayoutParams trailRight = baseParams(width, -1);
+        trailRight.gravity = Gravity.END | Gravity.TOP;
         if (windowManager != null) {
             windowManager.addView(leftEdge, left);
             windowManager.addView(rightEdge, right);
+            windowManager.addView(leftTrail, trailLeft);
+            windowManager.addView(rightTrail, trailRight);
+            leftTrail.setAlpha(0f);
+            rightTrail.setAlpha(0f);
         }
+    }
+
+    private View trailView() {
+        View v = new View(this);
+        int hue = settings.bubbleColorHue();
+        int color = Color.HSVToColor(new float[]{hue, 0.7f, 0.9f});
+        GradientDrawable gd = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{color, Color.TRANSPARENT});
+        v.setBackground(gd);
+        return v;
     }
 
     private View edgeView(int sign) {
@@ -198,7 +258,37 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private void adjust(int direction) {
         VolumeController.VolumeState state = volumeController.changeBySteps(direction);
         speakVolume(state);
+        pulseBubble();
         show(state);
+    }
+
+    private void pulseBubble() {
+        if (bubble == null || bubble.getParent() == null) return;
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(
+            ObjectAnimator.ofFloat(bubble, "scaleX", 1f, 1.15f, 0.94f, 1.04f, 1f),
+            ObjectAnimator.ofFloat(bubble, "scaleY", 1f, 1.15f, 0.94f, 1.04f, 1f)
+        );
+            set.setDuration(380);
+            set.setInterpolator(ACCEL_DECEL);
+            set.start();
+    }
+
+    private void showEdgeTrail(View trail, float startY, float dy) {
+        if (trail == null) return;
+        trail.animate().cancel();
+        int height = dp((int) Math.abs(dy));
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) trail.getLayoutParams();
+        lp.height = Math.max(height, dp(40));
+        trail.setLayoutParams(lp);
+        float fromAlpha = dy > 0 ? 0.3f : 0.1f;
+        trail.setAlpha(fromAlpha);
+        trail.animate()
+            .alpha(0.6f)
+            .setDuration(80)
+            .setInterpolator(DECEL)
+            .withEndAction(() -> trail.animate().alpha(0f).setDuration(250).setInterpolator(DECEL).start())
+            .start();
     }
 
     private void speakVolume(VolumeController.VolumeState state) {
@@ -232,17 +322,37 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         indicator.setText(streamLabel + "  " + state.percent() + "%" + muteIndicator);
         indicator.setVisibility(View.VISIBLE);
         indicator.animate().cancel();
+        indicator.setScaleX(0.7f); indicator.setScaleY(0.7f);
         indicator.setAlpha(0f);
-        indicator.animate().alpha(1f).setDuration(120).start();
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(
+            ObjectAnimator.ofFloat(indicator, "alpha", 0f, 1f),
+            ObjectAnimator.ofFloat(indicator, "scaleX", 0.7f, 1.08f, 1f),
+            ObjectAnimator.ofFloat(indicator, "scaleY", 0.7f, 1.08f, 1f)
+        );
+            set.setDuration(220);
+            set.setInterpolator(OVERSHOOT);
+            set.start();
         handler.removeCallbacks(hideIndicator);
         handler.postDelayed(hideIndicator, 1200);
     }
 
     private final Runnable hideIndicator = () -> {
         if (indicator != null) {
-            indicator.animate().alpha(0f).setDuration(180).withEndAction(() -> {
-                if (indicator != null) indicator.setVisibility(View.GONE);
-            }).start();
+            AnimatorSet set = new AnimatorSet();
+            set.playTogether(
+                ObjectAnimator.ofFloat(indicator, "alpha", 1f, 0f),
+                ObjectAnimator.ofFloat(indicator, "scaleX", 1f, 0.8f),
+                ObjectAnimator.ofFloat(indicator, "scaleY", 1f, 0.8f)
+            );
+            set.setDuration(200);
+            set.setInterpolator(DECEL);
+            set.addListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator a) {
+                    if (indicator != null) indicator.setVisibility(View.GONE);
+                }
+            });
+            set.start();
         }
     };
 
@@ -267,6 +377,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         long now = System.currentTimeMillis();
         if (g > threshold && now - lastShake > 1200) {
             lastShake = now;
+            pulseBubble();
             show(volumeController.muteOrRestoreMedia());
         }
     }
@@ -305,13 +416,21 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private final class BubbleTouch implements View.OnTouchListener {
         private final WindowManager.LayoutParams lp;
         private float downRawX, downRawY, downX, downY;
-        private long downAt, lastTap;
+        private long lastTap;
         private boolean didMove = false;
         BubbleTouch(WindowManager.LayoutParams lp) { this.lp = lp; }
         @Override public boolean onTouch(View v, MotionEvent event) {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    downRawX = event.getRawX(); downRawY = event.getRawY(); downX = lp.x; downY = lp.y; downAt = System.currentTimeMillis(); didMove = false;
+                    AnimatorSet press = new AnimatorSet();
+                    press.playTogether(
+                        ObjectAnimator.ofFloat(v, "scaleX", 1f, 0.88f, 1f),
+                        ObjectAnimator.ofFloat(v, "scaleY", 1f, 0.88f, 1f)
+                    );
+                    press.setDuration(120);
+                    press.setInterpolator(ACCEL_DECEL);
+                    press.start();
+                    downRawX = event.getRawX(); downRawY = event.getRawY(); downX = lp.x; downY = lp.y; didMove = false;
                     v.postDelayed(longPressCheck, ViewConfiguration.getLongPressTimeout());
                     return true;
                 case MotionEvent.ACTION_MOVE:
@@ -347,7 +466,14 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             return false;
         }
         private final Runnable longPressCheck = new Runnable() {
-            @Override public void run() { hideBubble(); }
+            @Override public void run() {
+                Vibrator vr = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                if (vr != null && vr.hasVibrator()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vr.vibrate(VibrationEffect.createOneShot(8, VibrationEffect.DEFAULT_AMPLITUDE));
+                    else vr.vibrate(8);
+                }
+                hideBubble();
+            }
         };
         private boolean allowsSwipe() { return settings.gestureMode() != SettingsStore.GestureMode.DOUBLE_TAP; }
         private boolean allowsDoubleTap() { return settings.gestureMode() != SettingsStore.GestureMode.SWIPE; }
@@ -369,6 +495,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                 float dy = event.getRawY() - downY;
                 boolean vertical = Math.abs(dy) > Math.abs(dx);
                 if (vertical && Math.abs(dy) > dp(settings.gestureSensitivity())) {
+                    showEdgeTrail(sign > 0 ? rightTrail : leftTrail, downY, dy);
                     adjust(dy < 0 ? 1 : -1);
                 }
                 return true;

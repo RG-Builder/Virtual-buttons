@@ -2,25 +2,16 @@ package com.example.virtualbuttons;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.PixelFormat;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
-import android.graphics.Shader;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -28,8 +19,10 @@ import android.widget.TextView;
 public class TrainingActivity extends Activity {
     private SettingsStore settings;
     private TextView feedback;
-    private int detectedCount = 0;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private static final DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
+    private static final OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.4f);
+    private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -107,19 +100,24 @@ public class TrainingActivity extends Activity {
         feedback.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         feedback.setTextColor(Color.rgb(27, 94, 32));
         feedback.setPadding(0, dp(16), 0, dp(16));
-        feedback.setVisibility(View.GONE);
+        feedback.setVisibility(TextView.GONE);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setGravity(Gravity.CENTER);
 
         Button done = makePrimaryBtn(getString(R.string.training_done));
-        done.setOnClickListener(v -> finish());
+        done.setOnClickListener(v -> {
+            v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
+                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start();
+            handler.postDelayed(this::finish, 100);
+        });
 
         Button reset = makeTextBtn(getString(R.string.training_reset));
         reset.setOnClickListener(v -> {
-            detectedCount = 0;
-            feedback.setVisibility(View.GONE);
+            v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(80)
+                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(80).start()).start();
+            feedback.setVisibility(TextView.GONE);
             ActionManager.refreshService(this);
         });
 
@@ -136,6 +134,15 @@ public class TrainingActivity extends Activity {
         root.addView(seekCard);
         root.addView(feedback);
         root.addView(btnRow);
+
+        title.setAlpha(0f); title.setTranslationY(40f);
+        title.animate().alpha(1f).translationY(0f).setDuration(350).setInterpolator(DECEL).start();
+        hint.setAlpha(0f); hint.setTranslationY(30f);
+        hint.animate().alpha(1f).translationY(0f).setDuration(350).setStartDelay(60).setInterpolator(DECEL).start();
+        seekCard.setAlpha(0f); seekCard.setTranslationY(20f);
+        seekCard.animate().alpha(1f).translationY(0f).setDuration(350).setStartDelay(120).setInterpolator(DECEL).start();
+        btnRow.setAlpha(0f); btnRow.setTranslationY(20f);
+        btnRow.animate().alpha(1f).translationY(0f).setDuration(350).setStartDelay(200).setInterpolator(DECEL).start();
 
         return root;
     }
