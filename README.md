@@ -49,15 +49,15 @@ gradle :app:assembleDebug
 ## Download APK
 
 ### Latest Release
-- **[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest)** — v1.0.4
+- **[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest)** — v1.0.5
 
 ### All Releases
 - **[Releases page](https://github.com/RG-Builder/Virtual-buttons/releases)** — version history
 
-**v1.0.4 Fixes:**
-- Swipe direction fixed (swipe down = volume down)
-- Quick Settings tile bug fixed
-- Bubble reappearing after hide fixed
+**v1.0.5 Fixes:**
+- **CRITICAL**: Remove FLAG_NOT_TOUCHABLE that blocked all gestures
+- Swipe direction fixed
+- Edge gestures sensitivity improved
 
 On first install, Android may warn about unknown sources — tap Allow and reopen the APK.
 
