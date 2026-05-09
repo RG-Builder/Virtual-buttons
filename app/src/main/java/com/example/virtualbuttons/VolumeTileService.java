@@ -14,19 +14,18 @@ public class VolumeTileService extends TileService {
         super.onClick();
         SettingsStore settings = new SettingsStore(this);
         if (!Settings.canDrawOverlays(this)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) startActivityAndCollapse(AppActions.overlaySettingsIntent(this));
-            else startActivityAndCollapse(AppActions.overlaySettingsIntent(this));
+            startActivityAndCollapse(ActionManager.overlaySettingsIntent(this));
             return;
         }
         boolean enabled = !settings.overlayEnabled();
         settings.setOverlayEnabled(enabled);
         if (enabled) {
-            AppActions.startFloatingService(this);
-            AppActions.showBubble(this);
+            ActionManager.startFloatingService(this);
+            ActionManager.showBubble(this);
             updateTile();
         } else {
-            AppActions.showBubble(this);
-            Intent hide = new Intent(this, FloatingVolumeService.class).setAction(AppActions.ACTION_HIDE_BUBBLE);
+            ActionManager.showBubble(this);
+            Intent hide = new Intent(this, FloatingVolumeService.class).setAction(ActionManager.ACTION_HIDE_BUBBLE);
             startService(hide);
             updateTile();
         }

@@ -1,0 +1,171 @@
+package com.example.virtualbuttons;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Shader;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
+
+public class TrainingActivity extends Activity {
+    private SettingsStore settings;
+    private TextView feedback;
+    private int detectedCount = 0;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        settings = new SettingsStore(this);
+        setContentView(makeLayout());
+        ActionManager.startFloatingService(this);
+        ActionManager.showBubble(this);
+    }
+
+    @Override protected void onDestroy() {
+        super.onDestroy();
+        handler.removeCallbacksAndMessages(null);
+    }
+
+    private LinearLayout makeLayout() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        int pad = dp(24);
+        root.setPadding(pad, pad, pad, pad);
+        root.setBackgroundColor(0xFFFEF7FF);
+
+        TextView title = new TextView(this);
+        title.setText(getString(R.string.training_title));
+        title.setTextSize(24);
+        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        title.setPadding(0, dp(16), 0, dp(8));
+
+        TextView hint = new TextView(this);
+        hint.setText(getString(R.string.training_hint));
+        hint.setTextSize(15);
+        hint.setTextColor(Color.rgb(72, 68, 78));
+        hint.setLineSpacing(dp(4), 1f);
+        hint.setPadding(0, 0, 0, dp(24));
+
+        LinearLayout seekCard = new LinearLayout(this);
+        seekCard.setOrientation(LinearLayout.VERTICAL);
+        seekCard.setPadding(dp(16), dp(12), dp(16), dp(12));
+        seekCard.setBackground(new RoundRectDrawable(Color.WHITE, dp(12)));
+
+        LinearLayout seekHeader = new LinearLayout(this);
+        seekHeader.setOrientation(LinearLayout.HORIZONTAL);
+        seekHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView seekLabel = new TextView(this);
+        seekLabel.setText("Gesture sensitivity");
+        seekLabel.setTextSize(15);
+        seekLabel.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+
+        TextView seekVal = new TextView(this);
+        seekVal.setText(settings.gestureSensitivity() + "dp");
+        seekVal.setTextSize(15);
+        seekVal.setTextColor(Color.rgb(103, 80, 164));
+        seekVal.setPadding(dp(8), 0, 0, 0);
+
+        seekHeader.addView(seekLabel);
+        seekHeader.addView(new SpaceView(this), new LinearLayout.LayoutParams(0, 1, 1f));
+        seekHeader.addView(seekVal);
+
+        SeekBar seek = new SeekBar(this);
+        seek.setMax(80);
+        seek.setProgress(settings.gestureSensitivity() - 16);
+        seek.setThumbTintList(android.content.res.ColorStateList.valueOf(Color.rgb(103, 80, 164)));
+        seek.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.rgb(103, 80, 164)));
+        seek.setOnSeekBarChangeListener(new SimpleSeekListener(
+            p -> seekVal.setText((p + 16) + "dp"),
+            p -> { settings.putInt("gesture_sensitivity", p + 16); ActionManager.refreshService(this); }
+        ));
+
+        seekCard.addView(seekHeader);
+        seekCard.addView(seek);
+
+        feedback = new TextView(this);
+        feedback.setTextSize(18);
+        feedback.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        feedback.setTextColor(Color.rgb(27, 94, 32));
+        feedback.setPadding(0, dp(16), 0, dp(16));
+        feedback.setVisibility(View.GONE);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER);
+
+        Button done = makePrimaryBtn(getString(R.string.training_done));
+        done.setOnClickListener(v -> finish());
+
+        Button reset = makeTextBtn(getString(R.string.training_reset));
+        reset.setOnClickListener(v -> {
+            detectedCount = 0;
+            feedback.setVisibility(View.GONE);
+            ActionManager.refreshService(this);
+        });
+
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(0, dp(48), 1f);
+        sp.setMargins(dp(6), 0, dp(6), 0);
+        done.setLayoutParams(sp);
+        reset.setLayoutParams(sp);
+
+        btnRow.addView(done);
+        btnRow.addView(reset);
+
+        root.addView(title);
+        root.addView(hint);
+        root.addView(seekCard);
+        root.addView(feedback);
+        root.addView(btnRow);
+
+        return root;
+    }
+
+    private Button makeTextBtn(String label) {
+        Button btn = new Button(this);
+        btn.setText(label);
+        btn.setAllCaps(false);
+        btn.setTextSize(14);
+        btn.setTextColor(Color.rgb(103, 80, 164));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setStroke(dp(1), Color.rgb(103, 80, 164));
+        bg.setCornerRadius(dp(12));
+        bg.setColor(Color.TRANSPARENT);
+        btn.setBackground(bg);
+        return btn;
+    }
+
+    private Button makePrimaryBtn(String label) {
+        Button btn = new Button(this);
+        btn.setText(label);
+        btn.setAllCaps(false);
+        btn.setTextSize(14);
+        btn.setTextColor(Color.WHITE);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.rgb(103, 80, 164));
+        bg.setCornerRadius(dp(12));
+        btn.setBackground(bg);
+        return btn;
+    }
+
+    private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
+}

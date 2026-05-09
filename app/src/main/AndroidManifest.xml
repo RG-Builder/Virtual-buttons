@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="true"
@@ -20,6 +21,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".BatteryActivity" android:exported="false" android:theme="@style/AppTheme" />
+        <activity android:name=".TutorialActivity" android:exported="false" android:theme="@style/AppTheme" />
+        <activity android:name=".TrainingActivity" android:exported="false" android:theme="@style/AppTheme" />
 
         <service
             android:name=".FloatingVolumeService"
@@ -48,5 +53,14 @@
         </receiver>
 
         <receiver android:name=".ProfileReceiver" android:exported="false" />
+
+        <receiver android:name=".VolumeWidgetProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
     </application>
 </manifest>

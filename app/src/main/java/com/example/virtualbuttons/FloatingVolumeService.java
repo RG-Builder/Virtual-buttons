@@ -17,6 +17,7 @@ import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,7 +26,7 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-public class FloatingVolumeService extends Service implements SensorEventListener {
+public class FloatingVolumeService extends Service implements SensorEventListener, TextToSpeech.OnInitListener {
     private SettingsStore settings;
     private VolumeController volumeController;
     private WindowManager windowManager;
@@ -37,19 +38,32 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private long lastShake;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable singleTapRunnable = () -> adjust(1);
-    private final Runnable hideBubbleRunnable = () -> hideBubble();
+    private final Runnable hideBubbleRunnable = () -> hideBubble(false);
     private boolean bubbleVisible = false;
+    private boolean bubblePinned = false;
     private WindowManager.LayoutParams bubbleLp;
+    private TextToSpeech tts;
+    private boolean ttsReady = false;
 
-void hideBubble() {
+    @Override public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            tts.setLanguage(java.util.Locale.US);
+            ttsReady = true;
+        }
+    }
+
+    void hideBubble(boolean force) {
+        if (!force && bubblePinned) return;
         if (bubble != null && bubble.getParent() != null && windowManager != null) {
             bubble.animate().scaleX(0.5f).scaleY(0.5f).alpha(0f).setDuration(150).withEndAction(() -> {
                 try { if (windowManager != null) windowManager.removeView(bubble); } catch (Exception ignored) {}
             }).start();
         }
         bubbleVisible = false;
+        bubblePinned = false;
         handler.removeCallbacks(hideBubbleRunnable);
     }
+    void hideBubble() { hideBubble(false); }
     void showBubble() {
         if (bubble == null) initBubble();
         if (bubble != null && bubble.getParent() == null && windowManager != null) {
@@ -60,7 +74,7 @@ void hideBubble() {
             bubble.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(200).start();
         }
         bubbleVisible = true;
-        scheduleAutoHide();
+        if (!bubblePinned) scheduleAutoHide();
     }
     void refreshEdgeGestures() { remove(leftEdge); remove(rightEdge); if (Settings.canDrawOverlays(this)) addEdgeGestures(); }
     private void scheduleAutoHide() { handler.removeCallbacks(hideBubbleRunnable); handler.postDelayed(hideBubbleRunnable, 8000); }
@@ -70,7 +84,8 @@ void hideBubble() {
         settings = new SettingsStore(this);
         volumeController = new VolumeController(this, settings);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        AppActions.ensureChannel(this);
+        tts = new TextToSpeech(this, this);
+        ActionManager.ensureChannel(this);
         startForeground(8, notification());
         if (Settings.canDrawOverlays(this)) {
             addEdgeGestures();
@@ -81,22 +96,28 @@ void hideBubble() {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
-            if (AppActions.ACTION_STOP.equals(action)) {
+            if (ActionManager.ACTION_STOP.equals(action)) {
                 settings.setOverlayEnabled(false);
-                hideBubble();
+                hideBubble(true);
                 stopSelf();
-            } else if (AppActions.ACTION_VOLUME_UP.equals(action)) adjust(1);
-            else if (AppActions.ACTION_VOLUME_DOWN.equals(action)) adjust(-1);
-            else if (AppActions.ACTION_TOGGLE_MUTE.equals(action)) show(volumeController.muteOrRestoreMedia());
-            else if (AppActions.ACTION_HIDE_BUBBLE.equals(action)) hideBubble();
-            else if (AppActions.ACTION_SHOW_BUBBLE.equals(action)) {
+            } else if (ActionManager.ACTION_VOLUME_UP.equals(action)) adjust(1);
+            else if (ActionManager.ACTION_VOLUME_DOWN.equals(action)) adjust(-1);
+            else if (ActionManager.ACTION_TOGGLE_MUTE.equals(action)) show(volumeController.muteOrRestoreMedia());
+            else if (ActionManager.ACTION_HIDE_BUBBLE.equals(action)) hideBubble(true);
+            else if (ActionManager.ACTION_SHOW_BUBBLE_PERMANENT.equals(action)) {
+                if (Settings.canDrawOverlays(this)) {
+                    bubblePinned = true;
+                    if (bubble == null) initBubble();
+                    showBubble();
+                }
+            } else if (ActionManager.ACTION_SHOW_BUBBLE.equals(action)) {
                 if (Settings.canDrawOverlays(this)) {
                     if (bubble == null) initBubble();
                     showBubble();
                 }
-            } else if (AppActions.ACTION_REFRESH.equals(action)) {
+            } else if (ActionManager.ACTION_REFRESH.equals(action)) {
                 stopService(new Intent(this, FloatingVolumeService.class));
-                AppActions.startFloatingService(this);
+                ActionManager.startFloatingService(this);
             }
         } else if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) {
             if (bubble == null) initBubble();
@@ -106,6 +127,7 @@ void hideBubble() {
     }
 
     @Override public void onDestroy() {
+        if (tts != null) { tts.stop(); tts.shutdown(); }
         remove(bubble);
         remove(indicator);
         remove(leftEdge);
@@ -121,7 +143,9 @@ void hideBubble() {
     private void initBubble() {
         if (bubble != null) return;
         bubble = new FrameLayout(this);
-        int color = Color.argb(Math.round(settings.buttonOpacity() * 2.55f), 103, 80, 164);
+        int hue = settings.bubbleColorHue();
+        float[] hsv = new float[]{hue, 0.55f, 0.72f};
+        int color = Color.HSVToColor(Math.round(settings.buttonOpacity() * 2.55f), hsv);
         bubble.setBackground(new CircleDrawable(color));
         bubble.setContentDescription("Volume control bubble. Swipe up or down to change volume. Double-tap to mute. Long-press to hide.");
         TextView icon = new TextView(this);
@@ -171,7 +195,18 @@ void hideBubble() {
         return lp;
     }
 
-    private void adjust(int direction) { show(volumeController.changeBySteps(direction)); }
+    private void adjust(int direction) {
+        VolumeController.VolumeState state = volumeController.changeBySteps(direction);
+        speakVolume(state);
+        show(state);
+    }
+
+    private void speakVolume(VolumeController.VolumeState state) {
+        if (!settings.accessibilitySpeech() || !ttsReady) return;
+        String msg = state.percent() + " percent";
+        if (state.isMuted()) msg = "Muted";
+        tts.speak(msg, TextToSpeech.QUEUE_FLUSH, null, "volume");
+    }
 
     private void show(VolumeController.VolumeState state) {
         haptic();
@@ -228,8 +263,9 @@ void hideBubble() {
 
     @Override public void onSensorChanged(SensorEvent event) {
         float g = (float) Math.sqrt(event.values[0] * event.values[0] + event.values[1] * event.values[1] + event.values[2] * event.values[2]) / SensorManager.GRAVITY_EARTH;
+        float threshold = settings.shakeThreshold() / 100f;
         long now = System.currentTimeMillis();
-        if (g > 2.7f && now - lastShake > 1200) {
+        if (g > threshold && now - lastShake > 1200) {
             lastShake = now;
             show(volumeController.muteOrRestoreMedia());
         }
@@ -239,12 +275,12 @@ void hideBubble() {
 
     private Notification notification() {
         PendingIntent open = PendingIntent.getActivity(this, 1, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent up = actionIntent(AppActions.ACTION_VOLUME_UP, 2);
-        PendingIntent down = actionIntent(AppActions.ACTION_VOLUME_DOWN, 3);
-        PendingIntent mute = actionIntent(AppActions.ACTION_TOGGLE_MUTE, 4);
-        PendingIntent showBubble = actionIntent(AppActions.ACTION_SHOW_BUBBLE, 5);
-        PendingIntent stop = actionIntent(AppActions.ACTION_STOP, 6);
-        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, AppActions.CHANNEL_ID) : new Notification.Builder(this);
+        PendingIntent up = actionIntent(ActionManager.ACTION_VOLUME_UP, 2);
+        PendingIntent down = actionIntent(ActionManager.ACTION_VOLUME_DOWN, 3);
+        PendingIntent mute = actionIntent(ActionManager.ACTION_TOGGLE_MUTE, 4);
+        PendingIntent showBubble = actionIntent(ActionManager.ACTION_SHOW_BUBBLE_PERMANENT, 5);
+        PendingIntent stop = actionIntent(ActionManager.ACTION_STOP, 6);
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, ActionManager.CHANNEL_ID) : new Notification.Builder(this);
         return builder.setSmallIcon(R.drawable.ic_volume)
                 .setContentTitle("Virtual Buttons is ready")
                 .setContentText("Tap tile to show bubble \u2022 Swipe edges \u2022 Tap notification actions.")
@@ -334,10 +370,6 @@ void hideBubble() {
                 boolean vertical = Math.abs(dy) > Math.abs(dx);
                 if (vertical && Math.abs(dy) > dp(settings.gestureSensitivity())) {
                     adjust(dy < 0 ? 1 : -1);
-                } else if (!vertical) {
-                    // ignore horizontal swipes to avoid interfering with app gestures
-                } else {
-                    adjust(sign > 0 ? 1 : -1);
                 }
                 return true;
             }

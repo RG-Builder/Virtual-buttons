@@ -45,7 +45,17 @@ final class VolumeController {
         int stream = AudioManager.STREAM_MUSIC;
         int max = audioManager.getStreamMaxVolume(stream);
         int target = clamp(Math.round(max * settings.nightVolumePercent() / 100f), 0, max);
+        settings.setPreNightVolume(audioManager.getStreamVolume(stream));
         audioManager.setStreamVolume(stream, target, 0);
+        return state(stream);
+    }
+
+    VolumeState restoreDayProfile() {
+        int stream = AudioManager.STREAM_MUSIC;
+        int preNight = settings.preNightVolume();
+        int current = audioManager.getStreamVolume(stream);
+        int restore = preNight >= 0 ? preNight : current;
+        audioManager.setStreamVolume(stream, restore, 0);
         return state(stream);
     }
 

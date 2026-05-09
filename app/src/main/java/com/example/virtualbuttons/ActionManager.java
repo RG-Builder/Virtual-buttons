@@ -8,7 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 
-final class AppActions {
+public final class ActionManager {
     static final String CHANNEL_ID = "virtual_buttons_controls";
     static final String ACTION_VOLUME_UP = "com.example.virtualbuttons.ACTION_VOLUME_UP";
     static final String ACTION_VOLUME_DOWN = "com.example.virtualbuttons.ACTION_VOLUME_DOWN";
@@ -17,8 +17,11 @@ final class AppActions {
     static final String ACTION_HIDE_BUBBLE = "com.example.virtualbuttons.ACTION_HIDE_BUBBLE";
     static final String ACTION_SHOW_BUBBLE = "com.example.virtualbuttons.ACTION_SHOW_BUBBLE";
     static final String ACTION_REFRESH = "com.example.virtualbuttons.ACTION_REFRESH";
+    static final String ACTION_RESTORE_DAY_PROFILE = "com.example.virtualbuttons.ACTION_RESTORE_DAY_PROFILE";
+    static final String ACTION_SHOW_BUBBLE_PERMANENT = "com.example.virtualbuttons.ACTION_SHOW_BUBBLE_PERMANENT";
+    static final String ACTION_APPLY_NIGHT_PROFILE = "com.example.virtualbuttons.ACTION_APPLY_NIGHT_PROFILE";
 
-    private AppActions() {}
+    private ActionManager() {}
 
     static void ensureChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -28,6 +28,8 @@ final class SettingsStore {
     boolean edgeGestures() { return prefs.getBoolean("edge_gestures", true); }
     int edgeWidthDp() { return prefs.getInt("edge_width", 12); }
     boolean shakeToMute() { return prefs.getBoolean("shake_to_mute", false); }
+    int shakeThreshold() { return prefs.getInt("shake_threshold", 270); }
+    int bubbleColorHue() { return prefs.getInt("bubble_color_hue", 265); }
     boolean haptics() { return prefs.getBoolean("haptics", true); }
     boolean visualIndicator() { return prefs.getBoolean("visual_indicator", true); }
     boolean autoNightProfile() { return prefs.getBoolean("auto_night_profile", false); }
@@ -37,6 +39,15 @@ final class SettingsStore {
     boolean startOnBoot() { return prefs.getBoolean("start_on_boot", true); }
     int lastAudibleMedia() { return prefs.getInt("last_audible_media", -1); }
     void setLastAudibleMedia(int value) { prefs.edit().putInt("last_audible_media", value).apply(); }
+    int preNightVolume() { return prefs.getInt("pre_night_volume", -1); }
+    void setPreNightVolume(int value) { prefs.edit().putInt("pre_night_volume", value).apply(); }
+    boolean darkMode() { return prefs.getBoolean("dark_mode", false); }
+    void setDarkMode(boolean enabled) { prefs.edit().putBoolean("dark_mode", enabled).apply(); }
+    boolean onboardingDone() { return prefs.getBoolean("onboarding_done", false); }
+    void setOnboardingDone(boolean done) { prefs.edit().putBoolean("onboarding_done", done).apply(); }
+    boolean accessibilitySpeech() { return prefs.getBoolean("accessibility_speech", false); }
+    int activePreset() { return prefs.getInt("active_preset", -1); }
+    void setActivePreset(int preset) { prefs.edit().putInt("active_preset", preset).apply(); }
 
     void putInt(String key, int value) { prefs.edit().putInt(key, value).apply(); }
     void putBoolean(String key, boolean value) { prefs.edit().putBoolean(key, value).apply(); }

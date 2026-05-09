@@ -10,7 +10,7 @@ public class BootReceiver extends BroadcastReceiver {
         SettingsStore settings = new SettingsStore(context);
         AutoProfileScheduler.schedule(context);
         if (settings.startOnBoot() && settings.overlayEnabled() && Settings.canDrawOverlays(context)) {
-            AppActions.startFloatingService(context);
+            ActionManager.startFloatingService(context);
         }
     }
 }
