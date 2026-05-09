@@ -19,12 +19,8 @@ public class VolumeTileService extends TileService {
         }
         if (settings.backgroundRunning()) {
             if (settings.overlayEnabled()) {
-                if (bubble != null && bubble.getParent() != null) {
-                    Intent hide = new Intent(this, FloatingVolumeService.class).setAction(ActionManager.ACTION_HIDE_BUBBLE);
-                    startService(hide);
-                } else {
-                    ActionManager.showBubble(this);
-                }
+                Intent hide = new Intent(this, FloatingVolumeService.class).setAction(ActionManager.ACTION_HIDE_BUBBLE);
+                startService(hide);
             } else {
                 settings.setOverlayEnabled(true);
                 ActionManager.startFloatingService(this);
