@@ -52,7 +52,15 @@ jobs:
           draft: false
           prerelease: false
           tag_name: latest
-          name: "Latest Build"
-          body: "Direct download: VirtualButtons.apk"
+          name: "Virtual Buttons v1.0.4"
+          body: |
+            Latest build - swipe now works correctly!
+            
+            **Fixes:**
+            - Swipe direction fixed (swipe down = volume down)
+            - Quick Settings tile bubble reference fixed
+            - Bubble reappearing after hide fixed
+            
+            Download: VirtualButtons.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
