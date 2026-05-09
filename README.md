@@ -48,13 +48,20 @@ gradle :app:assembleDebug
 
 ## Download APK
 
-**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest/download/VirtualButtons.apk)**
+**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/download/v1.0.1/VirtualButtons.apk)** — v1.0.1
 
 On first install, Android may warn about unknown sources — tap Allow and reopen the APK.
 
 ---
 
 ## Release History
+
+### v1.0.1
+- **Bug fixes**: night profile midnight crossing, bubble off-screen bounds, enum crash protection, animation overlap, handler leak, adjust debounce, edge gesture cancel
+- **Android 12+**: exact alarm permission request for night profile scheduling
+- **Widget**: home screen widget live-updates on volume changes
+- **Release build**: R8 minification (52KB vs 85KB debug)
+- **i18n**: all hardcoded strings localized
 
 ### v1.0.0
 - Initial release
