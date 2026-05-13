@@ -81,7 +81,7 @@ public class TutorialActivity extends Activity {
         navRow.setGravity(Gravity.CENTER);
 
         Button skip = makeTextBtn(getString(R.string.tutorial_skip));
-        skip.setOnClickListener(this::animatePress);
+        skip.setOnClickListener(v -> { animatePress(v); finishTutorial(false); });
 
         nextBtn = makePrimaryBtn(currentStep < steps.length - 1 ? getString(R.string.tutorial_next) : getString(R.string.tutorial_got_it));
         nextBtn.setOnClickListener(v -> {

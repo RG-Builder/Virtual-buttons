@@ -71,7 +71,7 @@ public class TrainingActivity extends Activity {
         seekHeader.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView seekLabel = new TextView(this);
-        seekLabel.setText("Gesture sensitivity");
+        seekLabel.setText(getString(R.string.gesture_sensitivity));
         seekLabel.setTextSize(15);
         seekLabel.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         seekLabel.setTextColor(text());

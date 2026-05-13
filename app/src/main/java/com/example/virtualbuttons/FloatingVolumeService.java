@@ -315,9 +315,9 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         if (trail == null) return;
         trail.animate().cancel();
         int height = dp((int) Math.abs(dy));
-        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) trail.getLayoutParams();
+        WindowManager.LayoutParams lp = (WindowManager.LayoutParams) trail.getLayoutParams();
         lp.height = Math.max(height, dp(40));
-        trail.setLayoutParams(lp);
+        if (windowManager != null) windowManager.updateViewLayout(trail, lp);
         float fromAlpha = dy > 0 ? 0.3f : 0.1f;
         trail.setAlpha(fromAlpha);
         trail.animate()
@@ -375,7 +375,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     }
 
     private final Runnable hideIndicator = () -> {
-        if (indicator != null) {
+        if (indicator != null && indicator.getParent() != null) {
             AnimatorSet set = new AnimatorSet();
             set.playTogether(
                 ObjectAnimator.ofFloat(indicator, "alpha", 1f, 0f),
@@ -496,7 +496,6 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
                     v.removeCallbacks(longPressCheck);
                     resetTouchState();
                     float fdx = event.getRawX() - downRawX;
@@ -521,6 +520,11 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     lastTap = now;
                     settings.setButtonPosition(lp.x, lp.y);
                     return true;
+                case MotionEvent.ACTION_CANCEL:
+                    v.removeCallbacks(longPressCheck);
+                    resetTouchState();
+                    lastTap = System.currentTimeMillis();
+                    return true;
             }
             return false;
         }
@@ -543,18 +547,14 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         private final int sign;
         private float downX, downY;
         private boolean isDragging = false;
-        private int verticalDragThreshold;
         EdgeTouch(int sign) { this.sign = sign; }
         private int getVerticalDragThreshold() {
-            if (verticalDragThreshold == 0) {
-                int sensitivity = settings.gestureSensitivity();
-                int minThreshold = dp(4);
-                int maxThreshold = dp(24);
-                int range = maxThreshold - minThreshold;
-                int inverseSens = 96 - sensitivity;
-                verticalDragThreshold = minThreshold + (inverseSens * range / 80);
-            }
-            return verticalDragThreshold;
+            int sensitivity = settings.gestureSensitivity();
+            int minThreshold = dp(4);
+            int maxThreshold = dp(24);
+            int range = maxThreshold - minThreshold;
+            int inverseSens = 96 - sensitivity;
+            return minThreshold + (inverseSens * range / 80);
         }
         @Override public boolean onTouch(View v, MotionEvent event) {
             int action = event.getActionMasked();

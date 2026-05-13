@@ -385,7 +385,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         verRow.setOrientation(LinearLayout.HORIZONTAL);
         TextView vl = text(getString(R.string.about_version), 13, false);
         vl.setTextColor(textSec());
-        TextView vv = text("1.0.0", 13, false);
+        TextView vv = text(BuildConfig.VERSION_NAME, 13, false);
         vv.setTextColor(primary());
         verRow.addView(vl);
         verRow.addView(new SpaceView(this), new LinearLayout.LayoutParams(0, 1, 1f));
