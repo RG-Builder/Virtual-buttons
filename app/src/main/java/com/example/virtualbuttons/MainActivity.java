@@ -385,7 +385,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         verRow.setOrientation(LinearLayout.HORIZONTAL);
         TextView vl = text(getString(R.string.about_version), 13, false);
         vl.setTextColor(textSec());
-        TextView vv = text(BuildConfig.VERSION_NAME, 13, false);
+        TextView vv = text(getVersionName(), 13, false);
         vv.setTextColor(primary());
         verRow.addView(vl);
         verRow.addView(new SpaceView(this), new LinearLayout.LayoutParams(0, 1, 1f));
@@ -522,6 +522,11 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private void addSpacer(int dpv) { content.addView(new SpaceView(this), new LinearLayout.LayoutParams(1, dp(dpv))); }
 
     private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
+
+    private String getVersionName() {
+        try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; }
+        catch (Exception ignored) { return "1.0.1"; }
+    }
 
     private boolean isServiceRunning() {
         ActivityManager m = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
