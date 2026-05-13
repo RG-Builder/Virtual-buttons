@@ -129,6 +129,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
 
     void refreshEdgeGestures() {
         remove(leftEdge); remove(rightEdge); remove(leftTrail); remove(rightTrail);
+        leftEdge = null; rightEdge = null; leftTrail = null; rightTrail = null;
         if (Settings.canDrawOverlays(this)) addEdgeGestures();
     }
 
