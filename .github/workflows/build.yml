@@ -32,15 +32,6 @@ jobs:
           name: VirtualButtons
           path: app/build/outputs/apk/debug/VirtualButtons.apk
 
-      - name: Copy APK to release branch
-        run: |
-          git fetch origin +refs/heads/releases:refs/heads/releases || true
-          git checkout releases 2>/dev/null || git checkout --orphan releases
-          cp app/build/outputs/apk/debug/VirtualButtons.apk ./VirtualButtons.apk
-          git add VirtualButtons.apk
-          git -c user.email=action@github.com -c user.name="GitHub Action" commit -m "Release APK" || exit 0
-          git push -f origin releases
-
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -48,11 +39,23 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: VirtualButtons
           path: ./apk
+
+      - name: Copy APK to release branch
+        run: |
+          git fetch origin +refs/heads/releases:refs/heads/releases || true
+          git checkout releases 2>/dev/null || git checkout --orphan releases
+          cp ./apk/VirtualButtons.apk ./VirtualButtons.apk
+          git add VirtualButtons.apk
+          git -c user.email=action@github.com -c user.name="GitHub Action" commit -m "Release APK" || exit 0
+          git push -f origin releases
 
       - name: Create release
         uses: softprops/action-gh-release@v2
