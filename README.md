@@ -13,7 +13,9 @@ A native Android app that replaces damaged or unresponsive physical volume butto
 
 ## Download
 
-**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest/download/VirtualButtons.apk)** — Latest build (v1.0.5)
+**[Direct Install](https://raw.githubusercontent.com/RG-Builder/Virtual-buttons/releases/VirtualButtons.apk)** — Tap to install directly (works from any browser)
+
+**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest/download/VirtualButtons.apk)** — Save to device
 
 Or visit: https://github.com/RG-Builder/Virtual-buttons/releases
 

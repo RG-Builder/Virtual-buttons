@@ -32,6 +32,15 @@ jobs:
           name: VirtualButtons
           path: app/build/outputs/apk/debug/VirtualButtons.apk
 
+      - name: Copy APK to release branch
+        run: |
+          git fetch origin +refs/heads/releases:refs/heads/releases || true
+          git checkout releases
+          cp app/build/outputs/apk/debug/VirtualButtons.apk ./VirtualButtons.apk
+          git add VirtualButtons.apk
+          git -c user.email=action@github.com -c user.name="GitHub Action" commit -m "Release APK" || exit 0
+          git push -f origin releases
+
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -45,22 +54,20 @@ jobs:
           name: VirtualButtons
           path: ./apk
 
-      - name: Create Release
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: ./apk/VirtualButtons.apk
           draft: false
           prerelease: false
           tag_name: latest
-          name: "Virtual Buttons v1.0.4"
+          name: "Virtual Buttons v1.0.5"
           body: |
-            Latest build - swipe now works correctly!
-            
-            **Fixes:**
-            - Swipe direction fixed (swipe down = volume down)
-            - Quick Settings tile bubble reference fixed
-            - Bubble reappearing after hide fixed
+            Latest build
             
             Download: VirtualButtons.apk
+            
+            Direct install URL:
+            https://raw.githubusercontent.com/RG-Builder/Virtual-buttons/releases/VirtualButtons.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
