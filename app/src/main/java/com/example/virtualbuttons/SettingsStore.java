@@ -6,6 +6,8 @@ import android.content.SharedPreferences;
 final class SettingsStore {
     enum StreamMode { MEDIA, SYSTEM, ACTIVE }
     enum GestureMode { SWIPE, DOUBLE_TAP, BOTH }
+    enum ButtonType { POWER, VOLUME_UP, VOLUME_DOWN, HOME, RECENTS, BACK }
+    enum GestureDirection { UP, DOWN, LEFT, RIGHT, TAP, LONG_PRESS, DOUBLE_TAP }
 
     private static final String PREFS = "virtual_button_settings";
     private final SharedPreferences prefs;
@@ -58,6 +60,80 @@ final class SettingsStore {
     boolean accessibilitySpeech() { return prefs.getBoolean("accessibility_speech", false); }
     int activePreset() { return prefs.getInt("active_preset", -1); }
     void setActivePreset(int preset) { prefs.edit().putInt("active_preset", preset).apply(); }
+
+    boolean buttonEnabled(ButtonType type) {
+        switch (type) {
+            case POWER: return prefs.getBoolean("button_power_enabled", true);
+            case VOLUME_UP: return prefs.getBoolean("button_vol_up_enabled", true);
+            case VOLUME_DOWN: return prefs.getBoolean("button_vol_down_enabled", true);
+            case HOME: return prefs.getBoolean("button_home_enabled", true);
+            case RECENTS: return prefs.getBoolean("button_recents_enabled", true);
+            case BACK: return prefs.getBoolean("button_back_enabled", true);
+            default: return true;
+        }
+    }
+    void setButtonEnabled(ButtonType type, boolean enabled) {
+        String key = "button_" + type.name().toLowerCase() + "_enabled";
+        prefs.edit().putBoolean(key, enabled).apply();
+    }
+
+    String getGestureMapping(ButtonType type) {
+        String key = "gesture_" + type.name().toLowerCase();
+        return prefs.getString(key, getDefaultGesture(type));
+    }
+    void setGestureMapping(ButtonType type, String gesture) {
+        String key = "gesture_" + type.name().toLowerCase();
+        prefs.edit().putString(key, gesture).apply();
+    }
+    private String getDefaultGesture(ButtonType type) {
+        switch (type) {
+            case POWER: return "LONG_PRESS";
+            case VOLUME_UP: return "UP";
+            case VOLUME_DOWN: return "DOWN";
+            case HOME: return "TAP";
+            case RECENTS: return "DOUBLE_TAP";
+            case BACK: return "LEFT";
+            default: return "TAP";
+        }
+    }
+
+    boolean edgeGestureEnabled(ButtonType type) {
+        return prefs.getBoolean("edge_" + type.name().toLowerCase() + "_enabled", isDefaultEdgeEnabled(type));
+    }
+    void setEdgeGestureEnabled(ButtonType type, boolean enabled) {
+        String key = "edge_" + type.name().toLowerCase() + "_enabled";
+        prefs.edit().putBoolean(key, enabled).apply();
+    }
+    private boolean isDefaultEdgeEnabled(ButtonType type) {
+        return type == ButtonType.VOLUME_UP || type == ButtonType.VOLUME_DOWN;
+    }
+
+    int buttonPanelPosition() { return prefs.getInt("button_panel_position", 0); }
+    void setButtonPanelPosition(int pos) { prefs.edit().putInt("button_panel_position", pos).apply(); }
+
+    int buttonPanelSize() { return prefs.getInt("button_panel_size", 56); }
+    void setButtonPanelSize(int size) { prefs.edit().putInt("button_panel_size", size).apply(); }
+
+    int buttonPanelOpacity() { return prefs.getInt("button_panel_opacity", 90); }
+    void setButtonPanelOpacity(int opacity) { prefs.edit().putInt("button_panel_opacity", opacity).apply(); }
+
+    boolean showButtonPanel() { return prefs.getBoolean("show_button_panel", true); }
+    void setShowButtonPanel(boolean show) { prefs.edit().putBoolean("show_button_panel", show).apply(); }
+
+    int globalGestureSensitivity() { return prefs.getInt("global_gesture_sensitivity", 50); }
+    void setGlobalGestureSensitivity(int sensitivity) { prefs.edit().putInt("global_gesture_sensitivity", sensitivity).apply(); }
+
+    int globalGestureWidth() { return prefs.getInt("global_gesture_width", 16); }
+    void setGlobalGestureWidth(int width) { prefs.edit().putInt("global_gesture_width", width).apply(); }
+
+    boolean hapticFeedback() { return prefs.getBoolean("haptic_feedback", true); }
+    void setHapticFeedback(boolean enabled) { prefs.edit().putBoolean("haptic_feedback", enabled).apply(); }
+
+    boolean compactMode() { return prefs.getBoolean("compact_mode", false); }
+    void setCompactMode(boolean enabled) { prefs.edit().putBoolean("compact_mode", enabled).apply(); }
+
+    int themeStyle() { return prefs.getInt("theme_style", 0); }
+    void setThemeStyle(int style) { prefs.edit().putInt("theme_style", style).apply(); }
 
     void putInt(String key, int value) { prefs.edit().putInt(key, value).apply(); }
     void putBoolean(String key, boolean value) { prefs.edit().putBoolean(key, value).apply(); }

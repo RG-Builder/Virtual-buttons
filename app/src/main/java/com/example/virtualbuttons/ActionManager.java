@@ -3,11 +3,14 @@ package com.example.virtualbuttons;
 import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
+import android.view.accessibility.AccessibilityManager;
 
 public final class ActionManager {
     static final String CHANNEL_ID = "virtual_buttons_controls";
@@ -23,15 +26,49 @@ public final class ActionManager {
     static final String ACTION_APPLY_NIGHT_PROFILE = "com.example.virtualbuttons.ACTION_APPLY_NIGHT_PROFILE";
     static final String ACTION_VOLUME_CHANGED = "com.example.virtualbuttons.ACTION_VOLUME_CHANGED";
     static final String ACTION_DISMISS_NOTIFICATION = "com.example.virtualbuttons.ACTION_DISMISS_NOTIFICATION";
+    static final String ACTION_BUTTON_POWER = "com.example.virtualbuttons.ACTION_BUTTON_POWER";
+    static final String ACTION_BUTTON_HOME = "com.example.virtualbuttons.ACTION_BUTTON_HOME";
+    static final String ACTION_BUTTON_RECENTS = "com.example.virtualbuttons.ACTION_BUTTON_RECENTS";
+    static final String ACTION_BUTTON_BACK = "com.example.virtualbuttons.ACTION_BUTTON_BACK";
+    static final String ACTION_ACCESSIBILITY_SERVICE = "com.example.virtualbuttons.action.ACCESSIBILITY_SERVICE";
+    static final String CHANNEL_ID_BUTTONS = "virtual_buttons_system";
 
     private ActionManager() {}
 
     static void ensureChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = context.getSystemService(NotificationManager.class);
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Volume controls", NotificationManager.IMPORTANCE_LOW);
             channel.setDescription("Persistent controls for the virtual volume button");
-            context.getSystemService(NotificationManager.class).createNotificationChannel(channel);
+            nm.createNotificationChannel(channel);
+            NotificationChannel buttonChannel = new NotificationChannel(CHANNEL_ID_BUTTONS, "Virtual Buttons", NotificationManager.IMPORTANCE_LOW);
+            buttonChannel.setDescription("System button controls");
+            nm.createNotificationChannel(buttonChannel);
         }
+    }
+
+    static Intent accessibilitySettingsIntent(Context context) {
+        return new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+    }
+
+    static void startButtonPanelService(Context context) {
+        Intent intent = new Intent(context, ButtonPanelService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
+        else context.startService(intent);
+    }
+
+    static void stopButtonPanelService(Context context) {
+        Intent intent = new Intent(context, ButtonPanelService.class).setAction(ACTION_STOP);
+        context.startService(intent);
+    }
+
+    static boolean isAccessibilityServiceEnabled(Context context) {
+        AccessibilityManager am = (AccessibilityManager) context.getSystemService(Context.ACCESSIBILITY_SERVICE);
+        if (am == null) return false;
+        ComponentName componentName = new ComponentName(context, VirtualButtonAccessibilityService.class);
+        String flat = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (flat == null) return false;
+        return flat.contains(componentName.flattenToString());
     }
 
     static Intent overlaySettingsIntent(Context context) {

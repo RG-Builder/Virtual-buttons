@@ -209,6 +209,21 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         addSeek(getString(R.string.button_opacity), getString(R.string.unit_percent), 30, 100, settings.buttonOpacity(), v -> restartable("button_opacity", v));
         addColorPicker();
 
+        content.addView(section(getString(R.string.section_button_panel)));
+        addCheck(getString(R.string.show_button_panel), getString(R.string.show_button_panel_desc), settings.showButtonPanel(), (b, c) -> { settings.setShowButtonPanel(c); restartAllIfNeeded(); });
+        addSpinnerDesc(getString(R.string.button_panel_position), "", new String[]{getString(R.string.button_panel_position_top), getString(R.string.button_panel_position_bottom), getString(R.string.button_panel_position_center)}, positionLabel(settings.buttonPanelPosition()), v -> { settings.setButtonPanelPosition(positionEnum(v)); refreshStatus(); });
+        addSeek(getString(R.string.button_panel_size), getString(R.string.unit_dp), 40, 80, settings.buttonPanelSize(), v -> restartable("button_panel_size", v));
+        addSeek(getString(R.string.button_panel_opacity), getString(R.string.unit_percent), 40, 100, settings.buttonPanelOpacity(), v -> restartable("button_panel_opacity", v));
+        addCheck(getString(R.string.compact_mode), getString(R.string.compact_mode_desc), settings.compactMode(), (b, c) -> { settings.setCompactMode(c); restartAllIfNeeded(); });
+
+        content.addView(section(getString(R.string.section_all_buttons)));
+        addButtonToggles();
+
+        content.addView(section(getString(R.string.section_gesture_mapping)));
+        addCheck(getString(R.string.desc_edge_gestures), "", settings.edgeGestures(), (b, c) -> restartable("edge_gestures", c));
+        addSeek(getString(R.string.edge_strip_width), getString(R.string.unit_dp), 4, 24, settings.edgeWidthDp(), v -> restartable("edge_width", v));
+        addSeek(getString(R.string.global_gesture_sensitivity), getString(R.string.unit_percent), 10, 90, settings.globalGestureSensitivity(), v -> restartable("global_gesture_sensitivity", v));
+
         content.addView(section(getString(R.string.section_volume_behavior)));
         addSeek(getString(R.string.volume_step), "", 1, 5, settings.volumeStep(), v -> settings.putInt("volume_step", v));
         addSpinnerDesc(getString(R.string.controlled_stream_title), getString(R.string.stream_desc), new String[]{getString(R.string.stream_active), getString(R.string.stream_media), getString(R.string.stream_system)}, streamModeToLabel(settings.streamMode()), v -> settings.putString("stream_mode", streamModeToEnum(v)));
@@ -419,6 +434,59 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private void restartable(String k, boolean v) { settings.putBoolean(k, v); restartIfRunning(); refreshStatus(); }
     private void restartable(String k, int v) { settings.putInt(k, v); restartIfRunning(); refreshStatus(); }
     private void restartIfRunning() { if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) ActionManager.refreshService(this); }
+    private void restartAllIfNeeded() {
+        if (Settings.canDrawOverlays(this)) {
+            ActionManager.refreshService(this);
+            ActionManager.startButtonPanelService(this);
+        }
+    }
+
+    private String positionLabel(int pos) {
+        if (pos == 0) return getString(R.string.button_panel_position_top);
+        if (pos == 1) return getString(R.string.button_panel_position_bottom);
+        return getString(R.string.button_panel_position_center);
+    }
+
+    private int positionEnum(String v) {
+        if (v.equals(getString(R.string.button_panel_position_bottom))) return 1;
+        if (v.equals(getString(R.string.button_panel_position_center))) return 2;
+        return 0;
+    }
+
+    private void addButtonToggles() {
+        LinearLayout card = mkCard();
+        LinearLayout grid = new LinearLayout(this);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout row1 = new LinearLayout(this);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+        row1.addView(toggleBtn(getString(R.string.action_power), SettingsStore.ButtonType.POWER));
+        row1.addView(toggleBtn(getString(R.string.action_vol_up), SettingsStore.ButtonType.VOLUME_UP));
+        row1.addView(toggleBtn(getString(R.string.action_vol_down), SettingsStore.ButtonType.VOLUME_DOWN));
+        row2.addView(toggleBtn(getString(R.string.action_home), SettingsStore.ButtonType.HOME));
+        row2.addView(toggleBtn(getString(R.string.action_recents), SettingsStore.ButtonType.RECENTS));
+        row2.addView(toggleBtn(getString(R.string.action_back), SettingsStore.ButtonType.BACK));
+        grid.addView(row1);
+        grid.addView(row2);
+        card.addView(grid);
+        content.addView(card);
+    }
+
+    private View toggleBtn(String label, SettingsStore.ButtonType type) {
+        CheckBox cb = new CheckBox(this);
+        cb.setText(label);
+        cb.setTextSize(13);
+        cb.setTextColor(text());
+        cb.setChecked(settings.buttonEnabled(type));
+        cb.setOnCheckedChangeListener((b, c) -> {
+            settings.setButtonEnabled(type, c);
+            restartAllIfNeeded();
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        cb.setLayoutParams(lp);
+        return cb;
+    }
 
     private void addSpinnerDesc(String label, String desc, String[] vals, String sel, ValueSetter s) {
         LinearLayout card = mkCard();
