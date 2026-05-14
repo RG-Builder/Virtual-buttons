@@ -11,15 +11,6 @@ A native Android app that replaces damaged or unresponsive physical volume butto
 - **Shake to Mute** - Optional shake gesture
 - **Auto Night Profile** - Scheduled volume lowering
 
-## Download
-
-**[Direct Install](https://raw.githubusercontent.com/RG-Builder/Virtual-buttons/releases/VirtualButtons.apk)** — Tap to install directly (works from any browser)
-
-**[Download VirtualButtons.apk](https://github.com/RG-Builder/Virtual-buttons/releases/latest/download/VirtualButtons.apk)** — Save to device
-
-Or visit: https://github.com/RG-Builder/Virtual-buttons/releases
-
-On first install, Android may warn about unknown sources — tap Allow and reopen the APK.
 
 ## Settings
 
