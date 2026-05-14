@@ -48,15 +48,20 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
     private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
-        settings = new SettingsStore(this);
-        darkMode = settings.darkMode();
-        if (darkMode) setTheme(R.style.AppTheme_Dark);
-        else setTheme(R.style.AppTheme);
-        super.onCreate(savedInstanceState);
-        tts = new TextToSpeech(this, this);
-        buildModernUI();
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5);
+        try {
+            settings = new SettingsStore(this);
+            darkMode = settings.darkMode();
+            if (darkMode) setTheme(R.style.AppTheme_Dark);
+            else setTheme(R.style.AppTheme);
+            super.onCreate(savedInstanceState);
+            tts = new TextToSpeech(this, this);
+            buildModernUI();
+            if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            setContentView(new android.widget.TextView(this) {{ setText("Error loading app"); }});
         }
     }
 

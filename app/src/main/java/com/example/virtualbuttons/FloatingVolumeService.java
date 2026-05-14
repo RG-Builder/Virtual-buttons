@@ -140,21 +140,25 @@ public class FloatingVolumeService extends Service implements SensorEventListene
 
     @Override public void onCreate() {
         super.onCreate();
-        settings = new SettingsStore(this);
-        volumeController = new VolumeController(this, settings);
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        tts = new TextToSpeech(this, this);
-        ActionManager.ensureChannel(this);
-        startForeground(8, notification());
-        if (Settings.canDrawOverlays(this)) {
-            addEdgeGestures();
-        }
-        registerShakeSensor();
-        if (settings.overlayEnabled()) {
-            if (bubble == null) initBubble();
-            if (!settings.backgroundRunning()) {
-                showBubble();
+        try {
+            settings = new SettingsStore(this);
+            volumeController = new VolumeController(this, settings);
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            tts = new TextToSpeech(this, this);
+            ActionManager.ensureChannel(this);
+            startForeground(8, notification());
+            if (Settings.canDrawOverlays(this)) {
+                addEdgeGestures();
             }
+            registerShakeSensor();
+            if (settings.overlayEnabled()) {
+                if (bubble == null) initBubble();
+                if (!settings.backgroundRunning()) {
+                    showBubble();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

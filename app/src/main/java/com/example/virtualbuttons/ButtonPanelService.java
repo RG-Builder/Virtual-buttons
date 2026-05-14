@@ -71,12 +71,16 @@ public class ButtonPanelService extends Service implements SensorEventListener {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        if (audioManager != null) {
+            maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        }
         ActionManager.ensureChannel(this);
         startForeground(9, notification());
-        if (Settings.canDrawOverlays(this)) {
-            createPanel();
-        }
+        try {
+            if (Settings.canDrawOverlays(this)) {
+                createPanel();
+            }
+        } catch (Exception e) { e.printStackTrace(); }
         registerShakeSensor();
     }
 

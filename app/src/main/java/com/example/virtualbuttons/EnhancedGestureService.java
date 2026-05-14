@@ -33,14 +33,18 @@ public class EnhancedGestureService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        settings = new SettingsStore(this);
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        audioManager = (android.media.AudioManager) getSystemService(android.content.Context.AUDIO_SERVICE);
-        if (audioManager != null) {
-            maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+        try {
+            settings = new SettingsStore(this);
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            audioManager = (android.media.AudioManager) getSystemService(android.content.Context.AUDIO_SERVICE);
+            if (audioManager != null) {
+                maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+            }
+            setupEdgeGestures();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        setupEdgeGestures();
     }
 
     private void setupEdgeGestures() {
