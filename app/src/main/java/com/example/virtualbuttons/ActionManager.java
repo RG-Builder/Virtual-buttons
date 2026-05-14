@@ -62,6 +62,23 @@ public final class ActionManager {
         context.startService(intent);
     }
 
+    static void startEnhancedGestureService(Context context) {
+        Intent intent = new Intent(context, EnhancedGestureService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
+        else context.startService(intent);
+    }
+
+    static void stopEnhancedGestureService(Context context) {
+        Intent intent = new Intent(context, EnhancedGestureService.class).setAction(ACTION_STOP);
+        context.startService(intent);
+    }
+
+    static void refreshAllServices(Context context) {
+        refreshService(context);
+        startButtonPanelService(context);
+        startEnhancedGestureService(context);
+    }
+
     static boolean isAccessibilityServiceEnabled(Context context) {
         AccessibilityManager am = (AccessibilityManager) context.getSystemService(Context.ACCESSIBILITY_SERVICE);
         if (am == null) return false;

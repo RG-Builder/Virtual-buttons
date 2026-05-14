@@ -15,12 +15,14 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".ModernMainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".MainActivity" android:exported="false" />
 
         <activity android:name=".BatteryActivity" android:exported="false" android:theme="@style/AppTheme" />
         <activity android:name=".TutorialActivity" android:exported="false" android:theme="@style/AppTheme" />
@@ -38,6 +40,13 @@
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Virtual button panel for system controls" />
+        </service>
+
+        <service
+            android:name=".EnhancedGestureService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Enhanced edge gesture controls" />
         </service>
 
         <service

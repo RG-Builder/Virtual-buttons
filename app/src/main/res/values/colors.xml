@@ -10,6 +10,8 @@
     <color name="vb_success">#1B5E20</color>
     <color name="vb_error">#B3261E</color>
     <color name="vb_warning">#E65100</color>
+    <color name="vb_accent">#6750A4</color>
+    <color name="vb_accent_dark">#D0BCFF</color>
     <color name="vb_status_success_bg">#E8F5E9</color>
     <color name="vb_status_warning_bg">#FFF3E0</color>
     <color name="vb_status_error_bg">#FFEBEE</color>
