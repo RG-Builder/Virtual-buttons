@@ -235,10 +235,13 @@ public class ButtonPanelService extends Service implements SensorEventListener {
     }
 
     private void adjustVolume(int direction) {
-        int current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        int step = Math.max(1, settings.volumeStep());
-        int next = Math.max(0, Math.min(maxVolume, current + (direction * step)));
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, next, 0);
+        if (audioManager == null) return;
+        try {
+            int current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+            int step = Math.max(1, settings.volumeStep());
+            int next = Math.max(0, Math.min(maxVolume, current + (direction * step)));
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, next, 0);
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void animateButtonPress(View btn) {

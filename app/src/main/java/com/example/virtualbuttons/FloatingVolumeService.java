@@ -104,23 +104,26 @@ public class FloatingVolumeService extends Service implements SensorEventListene
 
     private void showBubble(boolean preservePinned) {
         if (bubble == null) initBubble();
+        if (bubble == null || windowManager == null) return;
         boolean wasPinned = bubblePinned;
         bubbleVisible = true;
         if (!preservePinned) bubblePinned = false;
-        if (bubble != null && bubble.getParent() == null && windowManager != null) {
-            windowManager.addView(bubble, bubbleLp);
-            bubble.setScaleX(0f); bubble.setScaleY(0f); bubble.setAlpha(0f);
-            bubble.setVisibility(View.VISIBLE);
-            AnimatorSet set = new AnimatorSet();
-            set.playTogether(
-                ObjectAnimator.ofFloat(bubble, "scaleX", 0f, 1.12f, 1f),
-                ObjectAnimator.ofFloat(bubble, "scaleY", 0f, 1.12f, 1f),
-                ObjectAnimator.ofFloat(bubble, "alpha", 0f, 1f)
-            );
-            set.setDuration(320);
-            set.setInterpolator(OVERSHOOT);
-            set.start();
-        }
+        try {
+            if (bubble.getParent() == null) {
+                windowManager.addView(bubble, bubbleLp);
+                bubble.setScaleX(0f); bubble.setScaleY(0f); bubble.setAlpha(0f);
+                bubble.setVisibility(View.VISIBLE);
+                AnimatorSet set = new AnimatorSet();
+                set.playTogether(
+                    ObjectAnimator.ofFloat(bubble, "scaleX", 0f, 1.12f, 1f),
+                    ObjectAnimator.ofFloat(bubble, "scaleY", 0f, 1.12f, 1f),
+                    ObjectAnimator.ofFloat(bubble, "alpha", 0f, 1f)
+                );
+                set.setDuration(320);
+                set.setInterpolator(OVERSHOOT);
+                set.start();
+            }
+        } catch (Exception e) { e.printStackTrace(); }
         if (preservePinned && wasPinned) {
             return;
         }
@@ -220,50 +223,54 @@ public class FloatingVolumeService extends Service implements SensorEventListene
 
     private void initBubble() {
         if (bubble != null) return;
-        bubble = new FrameLayout(this);
-        int hue = settings.bubbleColorHue();
-        float[] hsv = new float[]{hue, 0.55f, 0.72f};
-        int color = Color.HSVToColor(Math.round(settings.buttonOpacity() * 2.55f), hsv);
-        bubble.setBackground(new CircleDrawable(color));
-        bubble.setContentDescription("Volume control bubble. Swipe up or down to change volume. Double-tap to mute. Long-press to hide.");
-        TextView icon = new TextView(this);
-        icon.setText("\u25B2\u25BC");
-        icon.setTextColor(Color.WHITE);
-        icon.setTextSize(dp(11));
-        icon.setGravity(Gravity.CENTER);
-        icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        bubble.addView(icon, new FrameLayout.LayoutParams(-1, -1));
-        int size = dp(settings.buttonSizeDp());
-        bubbleLp = baseParams(size, size);
-        bubbleLp.gravity = Gravity.TOP | Gravity.START;
-        bubbleLp.x = settings.buttonX();
-        bubbleLp.y = settings.buttonY();
-        bubble.setOnTouchListener(new BubbleTouch(bubbleLp));
+        if (windowManager == null) return;
+        try {
+            bubble = new FrameLayout(this);
+            int hue = settings.bubbleColorHue();
+            float[] hsv = new float[]{hue, 0.55f, 0.72f};
+            int color = Color.HSVToColor(Math.round(settings.buttonOpacity() * 2.55f), hsv);
+            bubble.setBackground(new CircleDrawable(color));
+            bubble.setContentDescription("Volume control bubble");
+            TextView icon = new TextView(this);
+            icon.setText("\u25B2\u25BC");
+            icon.setTextColor(Color.WHITE);
+            icon.setTextSize(dp(11));
+            icon.setGravity(Gravity.CENTER);
+            icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            bubble.addView(icon, new FrameLayout.LayoutParams(-1, -1));
+            int size = dp(settings.buttonSizeDp());
+            bubbleLp = baseParams(size, size);
+            bubbleLp.gravity = Gravity.TOP | Gravity.START;
+            bubbleLp.x = settings.buttonX();
+            bubbleLp.y = settings.buttonY();
+            bubble.setOnTouchListener(new BubbleTouch(bubbleLp));
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void addEdgeGestures() {
         if (!settings.edgeGestures()) return;
-        leftEdge = edgeView(-1);
-        rightEdge = edgeView(1);
-        leftTrail = trailView();
-        rightTrail = trailView();
-        int width = dp(settings.edgeWidthDp());
-        WindowManager.LayoutParams left = baseParams(width, -1);
-        left.gravity = Gravity.START | Gravity.TOP;
-        WindowManager.LayoutParams right = baseParams(width, -1);
-        right.gravity = Gravity.END | Gravity.TOP;
-        WindowManager.LayoutParams trailLeft = baseParams(width, -1);
-        trailLeft.gravity = Gravity.START | Gravity.TOP;
-        WindowManager.LayoutParams trailRight = baseParams(width, -1);
-        trailRight.gravity = Gravity.END | Gravity.TOP;
-        if (windowManager != null) {
+        if (windowManager == null) return;
+        try {
+            leftEdge = edgeView(-1);
+            rightEdge = edgeView(1);
+            leftTrail = trailView();
+            rightTrail = trailView();
+            int width = dp(settings.edgeWidthDp());
+            WindowManager.LayoutParams left = baseParams(width, -1);
+            left.gravity = Gravity.START | Gravity.TOP;
+            WindowManager.LayoutParams right = baseParams(width, -1);
+            right.gravity = Gravity.END | Gravity.TOP;
+            WindowManager.LayoutParams trailLeft = baseParams(width, -1);
+            trailLeft.gravity = Gravity.START | Gravity.TOP;
+            WindowManager.LayoutParams trailRight = baseParams(width, -1);
+            trailRight.gravity = Gravity.END | Gravity.TOP;
             windowManager.addView(leftEdge, left);
             windowManager.addView(rightEdge, right);
             windowManager.addView(leftTrail, trailLeft);
             windowManager.addView(rightTrail, trailRight);
             leftTrail.setAlpha(0f);
             rightTrail.setAlpha(0f);
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private View trailView() {
