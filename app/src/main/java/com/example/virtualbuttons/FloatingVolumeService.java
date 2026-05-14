@@ -58,6 +58,10 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private TextToSpeech tts;
     private boolean ttsReady = false;
 
+    private EdgeVolumePopup edgeVolumePopup;
+    private EdgeGestureDetector edgeGestureDetector;
+    private boolean edgeLongPressEnabled = true;
+
     private static final DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
     private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
     private static final OvershootInterpolator OVERSHOOT = new OvershootInterpolator(1.8f);
@@ -150,7 +154,9 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             tts = new TextToSpeech(this, this);
             ActionManager.ensureChannel(this);
             startForeground(8, notification());
+
             if (Settings.canDrawOverlays(this)) {
+                initEdgeVolumePopup();
                 addEdgeGestures();
             }
             registerShakeSensor();
@@ -216,6 +222,8 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         handler.removeCallbacks(singleTapRunnable);
         handler.removeCallbacks(hideIndicator);
         if (sensorManager != null) sensorManager.unregisterListener(this);
+        if (edgeGestureDetector != null) edgeGestureDetector.detach();
+        if (edgeVolumePopup != null) edgeVolumePopup.hide(true);
         super.onDestroy();
     }
 
@@ -280,6 +288,36 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         GradientDrawable gd = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{color, Color.TRANSPARENT});
         v.setBackground(gd);
         return v;
+    }
+
+    private void initEdgeVolumePopup() {
+        if (windowManager == null) return;
+
+        edgeVolumePopup = new EdgeVolumePopup(this, windowManager, settings);
+        edgeVolumePopup.setVolumeCallback((volume, max) -> {
+            sendBroadcast(new Intent(ActionManager.ACTION_VOLUME_CHANGED));
+        });
+
+        edgeGestureDetector = new EdgeGestureDetector(this, windowManager, new EdgeGestureDetector.EdgeGestureCallback() {
+            @Override
+            public void onLongPressTriggered(float x, float y, int edge) {
+                if (!edgeLongPressEnabled || !settings.edgeGestures()) return;
+                edgeVolumePopup.show(x, y, edge);
+            }
+
+            @Override
+            public void onDragStarted(float x, float y, int edge) {
+            }
+
+            @Override
+            public void onDrag(float x, float y, float deltaY, int edge) {
+            }
+
+            @Override
+            public void onDragEnded(float x, float y, int edge) {
+            }
+        });
+        edgeGestureDetector.attach();
     }
 
     private View edgeView(int sign) {
