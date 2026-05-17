@@ -132,12 +132,6 @@ public class EdgeVolumePopup {
         background.setColor(Color.argb(248, 28, 26, 33));
         background.setStroke(dp(1), Color.argb(80, 255, 255, 255));
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            android.graphics.Outline outline = new android.graphics.Outline();
-            outline.setRect(0, 0, dp(80), dp(320));
-            background.setOutline(outline);
-        }
-
         popupContainer.setBackground(background);
 
         sliderView.setVolumeRange(maxVolume, currentVolume);
