@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [main, work]
+    tags: ['*']
   pull_request:
     branches: [main]
   workflow_dispatch:
