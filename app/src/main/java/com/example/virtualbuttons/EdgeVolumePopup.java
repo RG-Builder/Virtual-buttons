@@ -124,7 +124,7 @@ public class EdgeVolumePopup {
     private void updatePopupAppearance() {
         if (popupContainer == null) return;
 
-        float[] hsv = new float[]{hue / 360f, 0.55f, 0.85f};
+        float[] hsv = new float[]{hue, 0.55f, 0.85f};
         int primaryColor = Color.HSVToColor(hsv);
 
         GradientDrawable background = new GradientDrawable();

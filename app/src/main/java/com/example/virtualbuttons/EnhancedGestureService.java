@@ -1,5 +1,7 @@
 package com.example.virtualbuttons;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
@@ -41,6 +43,8 @@ public class EnhancedGestureService extends Service {
             if (audioManager != null) {
                 maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
             }
+            ActionManager.ensureChannel(this);
+            startForeground(10, notification());
             setupEdgeGestures();
         } catch (Exception e) {
             e.printStackTrace();
@@ -50,28 +54,31 @@ public class EnhancedGestureService extends Service {
     private void setupEdgeGestures() {
         if (!settings.edgeGestures() || !Settings.canDrawOverlays(this)) return;
 
-        int width = dp(settings.edgeWidthDp());
-        int height = dp(80);
+        int edgeSize = dp(settings.edgeWidthDp());
 
         topEdge = createEdgeView(0);
         bottomEdge = createEdgeView(1);
         leftEdge = createEdgeView(2);
         rightEdge = createEdgeView(3);
 
-        WindowManager.LayoutParams topParams = edgeParams(width, -1, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        WindowManager.LayoutParams bottomParams = edgeParams(width, -1, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        WindowManager.LayoutParams leftParams = edgeParams(-1, height, Gravity.START | Gravity.CENTER_VERTICAL);
-        WindowManager.LayoutParams rightParams = edgeParams(-1, height, Gravity.END | Gravity.CENTER_VERTICAL);
+        WindowManager.LayoutParams topParams = edgeParams(WindowManager.LayoutParams.MATCH_PARENT, edgeSize, Gravity.TOP | Gravity.START);
+        WindowManager.LayoutParams bottomParams = edgeParams(WindowManager.LayoutParams.MATCH_PARENT, edgeSize, Gravity.BOTTOM | Gravity.START);
+        WindowManager.LayoutParams leftParams = edgeParams(edgeSize, WindowManager.LayoutParams.MATCH_PARENT, Gravity.START | Gravity.TOP);
+        WindowManager.LayoutParams rightParams = edgeParams(edgeSize, WindowManager.LayoutParams.MATCH_PARENT, Gravity.END | Gravity.TOP);
 
         topTrail = createTrailView(Gravity.TOP);
         bottomTrail = createTrailView(Gravity.BOTTOM);
         leftTrail = createTrailView(Gravity.START);
         rightTrail = createTrailView(Gravity.END);
 
-        WindowManager.LayoutParams topTrailParams = edgeParams(width, 1, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        WindowManager.LayoutParams bottomTrailParams = edgeParams(width, 1, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        WindowManager.LayoutParams leftTrailParams = edgeParams(1, height, Gravity.START | Gravity.CENTER_VERTICAL);
-        WindowManager.LayoutParams rightTrailParams = edgeParams(1, height, Gravity.END | Gravity.CENTER_VERTICAL);
+        WindowManager.LayoutParams topTrailParams = edgeParams(WindowManager.LayoutParams.MATCH_PARENT, 1, Gravity.TOP | Gravity.START);
+        WindowManager.LayoutParams bottomTrailParams = edgeParams(WindowManager.LayoutParams.MATCH_PARENT, 1, Gravity.BOTTOM | Gravity.START);
+        WindowManager.LayoutParams leftTrailParams = edgeParams(1, WindowManager.LayoutParams.MATCH_PARENT, Gravity.START | Gravity.TOP);
+        WindowManager.LayoutParams rightTrailParams = edgeParams(1, WindowManager.LayoutParams.MATCH_PARENT, Gravity.END | Gravity.TOP);
+        makePassThrough(topTrailParams);
+        makePassThrough(bottomTrailParams);
+        makePassThrough(leftTrailParams);
+        makePassThrough(rightTrailParams);
 
         windowManager.addView(topEdge, topParams);
         windowManager.addView(bottomEdge, bottomParams);
@@ -96,6 +103,10 @@ public class EnhancedGestureService extends Service {
             PixelFormat.TRANSLUCENT);
         lp.gravity = gravity;
         return lp;
+    }
+
+    private void makePassThrough(WindowManager.LayoutParams lp) {
+        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
     }
 
     private View createEdgeView(int position) {
@@ -127,7 +138,32 @@ public class EnhancedGestureService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && intent.getAction() != null) {
+            if (ActionManager.ACTION_STOP.equals(intent.getAction())) {
+                removeEdgeViews();
+                stopSelf();
+                return START_NOT_STICKY;
+            } else if (ActionManager.ACTION_REFRESH.equals(intent.getAction())) {
+                removeEdgeViews();
+                setupEdgeGestures();
+            }
+        }
         return START_STICKY;
+    }
+
+    private Notification notification() {
+        PendingIntent open = PendingIntent.getActivity(this, 2, new Intent(this, ModernMainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent stop = PendingIntent.getService(this, 7, new Intent(this, EnhancedGestureService.class).setAction(ActionManager.ACTION_STOP), PendingIntent.FLAG_IMMUTABLE);
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? new Notification.Builder(this, ActionManager.CHANNEL_ID_BUTTONS)
+                : new Notification.Builder(this);
+        return builder.setSmallIcon(R.drawable.ic_volume)
+                .setContentTitle("Edge Gestures Active")
+                .setContentText("Swipe screen edges for virtual controls")
+                .setOngoing(true)
+                .setContentIntent(open)
+                .addAction(R.drawable.ic_action_stop, "Stop", stop)
+                .build();
     }
 
     @Override
@@ -190,8 +226,8 @@ public class EnhancedGestureService extends Service {
                         View trail = getTrailForPosition(position);
                         if (trail != null) {
                             WindowManager.LayoutParams lp = (WindowManager.LayoutParams) trail.getLayoutParams();
-                            if (position == 0 || position == 1) lp.height = dp(Math.max(1, Math.abs((int) dy)));
-                            else lp.width = dp(Math.max(1, Math.abs((int) dx)));
+                            if (position == 0 || position == 1) lp.height = Math.max(dp(1), Math.round(Math.abs(dy)));
+                            else lp.width = Math.max(dp(1), Math.round(Math.abs(dx)));
                             windowManager.updateViewLayout(trail, lp);
                             trail.setAlpha(0.5f);
                         }

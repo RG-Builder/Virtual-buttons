@@ -59,7 +59,6 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private boolean ttsReady = false;
 
     private EdgeVolumePopup edgeVolumePopup;
-    private EdgeGestureDetector edgeGestureDetector;
     private boolean edgeLongPressEnabled = true;
 
     private static final DecelerateInterpolator DECEL = new DecelerateInterpolator(1.5f);
@@ -222,7 +221,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         handler.removeCallbacks(singleTapRunnable);
         handler.removeCallbacks(hideIndicator);
         if (sensorManager != null) sensorManager.unregisterListener(this);
-        if (edgeGestureDetector != null) edgeGestureDetector.detach();
+        handler.removeCallbacksAndMessages(null);
         if (edgeVolumePopup != null) edgeVolumePopup.hide(true);
         super.onDestroy();
     }
@@ -270,8 +269,10 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             right.gravity = Gravity.END | Gravity.TOP;
             WindowManager.LayoutParams trailLeft = baseParams(width, -1);
             trailLeft.gravity = Gravity.START | Gravity.TOP;
+            trailLeft.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
             WindowManager.LayoutParams trailRight = baseParams(width, -1);
             trailRight.gravity = Gravity.END | Gravity.TOP;
+            trailRight.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
             windowManager.addView(leftEdge, left);
             windowManager.addView(rightEdge, right);
             windowManager.addView(leftTrail, trailLeft);
@@ -297,27 +298,6 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         edgeVolumePopup.setVolumeCallback((volume, max) -> {
             sendBroadcast(new Intent(ActionManager.ACTION_VOLUME_CHANGED));
         });
-
-        edgeGestureDetector = new EdgeGestureDetector(this, windowManager, new EdgeGestureDetector.EdgeGestureCallback() {
-            @Override
-            public void onLongPressTriggered(float x, float y, int edge) {
-                if (!edgeLongPressEnabled || !settings.edgeGestures()) return;
-                edgeVolumePopup.show(x, y, edge);
-            }
-
-            @Override
-            public void onDragStarted(float x, float y, int edge) {
-            }
-
-            @Override
-            public void onDrag(float x, float y, float deltaY, int edge) {
-            }
-
-            @Override
-            public void onDragEnded(float x, float y, int edge) {
-            }
-        });
-        edgeGestureDetector.attach();
     }
 
     private View edgeView(int sign) {
@@ -363,7 +343,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     private void showEdgeTrail(View trail, float startY, float dy) {
         if (trail == null) return;
         trail.animate().cancel();
-        int height = dp((int) Math.abs(dy));
+        int height = Math.round(Math.abs(dy));
         WindowManager.LayoutParams lp = (WindowManager.LayoutParams) trail.getLayoutParams();
         lp.height = Math.max(height, dp(40));
         if (windowManager != null) windowManager.updateViewLayout(trail, lp);
@@ -596,6 +576,15 @@ public class FloatingVolumeService extends Service implements SensorEventListene
         private final int sign;
         private float downX, downY;
         private boolean isDragging = false;
+        private boolean longPressTriggered = false;
+        private final Runnable longPressRunnable = new Runnable() {
+            @Override public void run() {
+                if (!edgeLongPressEnabled || !settings.edgeGestures() || edgeVolumePopup == null || isDragging) return;
+                longPressTriggered = true;
+                haptic();
+                edgeVolumePopup.show(downX, downY, sign);
+            }
+        };
         EdgeTouch(int sign) { this.sign = sign; }
         private int getVerticalDragThreshold() {
             int sensitivity = settings.gestureSensitivity();
@@ -611,6 +600,8 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                 downX = event.getRawX();
                 downY = event.getRawY();
                 isDragging = false;
+                longPressTriggered = false;
+                handler.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
                 return true;
             }
             if (action == MotionEvent.ACTION_MOVE) {
@@ -618,22 +609,27 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                 float dy = event.getRawY() - downY;
                 if (!isDragging && Math.abs(dy) > getVerticalDragThreshold()) {
                     isDragging = true;
+                    handler.removeCallbacks(longPressRunnable);
                 }
-                if (isDragging) {
+                if (isDragging && !longPressTriggered) {
                     showEdgeTrail(sign > 0 ? rightTrail : leftTrail, downY, dy);
                 }
                 return true;
             }
             if (action == MotionEvent.ACTION_UP) {
+                handler.removeCallbacks(longPressRunnable);
                 float dy = event.getRawY() - downY;
-                if (isDragging || Math.abs(dy) > getVerticalDragThreshold()) {
+                if (!longPressTriggered && (isDragging || Math.abs(dy) > getVerticalDragThreshold())) {
                     adjust(dy < 0 ? 1 : -1);
                 }
                 isDragging = false;
+                longPressTriggered = false;
                 return true;
             }
             if (action == MotionEvent.ACTION_CANCEL) {
+                handler.removeCallbacks(longPressRunnable);
                 isDragging = false;
+                longPressTriggered = false;
                 return true;
             }
             return true;

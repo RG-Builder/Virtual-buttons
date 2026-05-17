@@ -78,7 +78,7 @@ public class ButtonPanelService extends Service implements SensorEventListener {
         startForeground(9, notification());
         try {
             if (Settings.canDrawOverlays(this)) {
-                createPanel();
+                showPanel();
             }
         } catch (Exception e) { e.printStackTrace(); }
         registerShakeSensor();
@@ -309,7 +309,7 @@ public class ButtonPanelService extends Service implements SensorEventListener {
 
     private void refreshPanel() {
         removePanel();
-        createPanel();
+        if (settings.showButtonPanel()) showPanel();
     }
 
     private void registerShakeSensor() {
@@ -333,7 +333,7 @@ public class ButtonPanelService extends Service implements SensorEventListener {
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     private Notification notification() {
-        PendingIntent open = PendingIntent.getActivity(this, 1, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = PendingIntent.getActivity(this, 1, new Intent(this, ModernMainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop = PendingIntent.getService(this, 6, new Intent(this, ButtonPanelService.class).setAction(ActionManager.ACTION_STOP), PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, ActionManager.CHANNEL_ID_BUTTONS) : new Notification.Builder(this);
         return builder.setSmallIcon(R.drawable.ic_volume)
