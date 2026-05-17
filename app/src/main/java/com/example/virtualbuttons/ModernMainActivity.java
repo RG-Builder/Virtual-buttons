@@ -59,9 +59,9 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
             if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
-            setContentView(new android.widget.TextView(this) {{ setText("Error loading app"); }});
+            showStartupError(e);
         }
     }
 
@@ -174,10 +174,16 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
         actions.setPadding(dp(20), dp(16), dp(20), dp(8));
 
         Button startBtn = createActionButton("Start All", true);
-        startBtn.setOnClickListener(v -> startAllServices());
+        startBtn.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            startAllServices();
+        });
 
         Button stopBtn = createActionButton("Stop", false);
-        stopBtn.setOnClickListener(v -> stopAllServices());
+        stopBtn.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            stopAllServices();
+        });
 
         actions.addView(startBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
         actions.addView(createSpacer(12, 0));
@@ -203,7 +209,6 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
         }
         btn.setBackground(bg);
         btn.setElevation(0);
-        btn.setOnClickListener(v -> v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY));
         return btn;
     }
 
@@ -480,8 +485,8 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
             return;
         }
         settings.setOverlayEnabled(true);
-        ActionManager.refreshAllServices(this);
-        animateSuccess();
+        boolean started = ActionManager.refreshAllServices(this);
+        if (started) animateSuccess();
         updateStatus();
     }
 
@@ -529,6 +534,16 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
         View root = getWindow().getDecorView();
         root.setAlpha(0.8f);
         root.animate().alpha(1f).setDuration(300).start();
+    }
+
+    private void showStartupError(Throwable error) {
+        TextView message = new TextView(this);
+        message.setText("Virtual Buttons could not load. Try clearing app data or reinstalling.\n\n" + error.getClass().getSimpleName());
+        message.setTextSize(16);
+        message.setTextColor(Color.WHITE);
+        message.setPadding(dp(24), dp(48), dp(24), dp(24));
+        message.setBackgroundColor(Color.rgb(80, 20, 20));
+        setContentView(message);
     }
 
     private int dp(int value) {

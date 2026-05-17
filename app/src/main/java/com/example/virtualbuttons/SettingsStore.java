@@ -38,7 +38,7 @@ final class SettingsStore {
     boolean shakeToMute() { return prefs.getBoolean("shake_to_mute", false); }
     int shakeThreshold() { return prefs.getInt("shake_threshold", 270); }
     int bubbleColorHue() { return prefs.getInt("bubble_color_hue", 265); }
-    boolean haptics() { return prefs.getBoolean("haptics", true); }
+    boolean haptics() { return prefs.getBoolean("haptics", prefs.getBoolean("haptic_feedback", true)); }
     boolean visualIndicator() { return prefs.getBoolean("visual_indicator", true); }
     boolean autoNightProfile() { return prefs.getBoolean("auto_night_profile", false); }
     int nightVolumePercent() { return prefs.getInt("night_volume", 25); }
@@ -62,19 +62,21 @@ final class SettingsStore {
     void setActivePreset(int preset) { prefs.edit().putInt("active_preset", preset).apply(); }
 
     boolean buttonEnabled(ButtonType type) {
-        switch (type) {
-            case POWER: return prefs.getBoolean("button_power_enabled", true);
-            case VOLUME_UP: return prefs.getBoolean("button_vol_up_enabled", true);
-            case VOLUME_DOWN: return prefs.getBoolean("button_vol_down_enabled", true);
-            case HOME: return prefs.getBoolean("button_home_enabled", true);
-            case RECENTS: return prefs.getBoolean("button_recents_enabled", true);
-            case BACK: return prefs.getBoolean("button_back_enabled", true);
-            default: return true;
-        }
+        return prefs.getBoolean(buttonEnabledKey(type), true);
     }
     void setButtonEnabled(ButtonType type, boolean enabled) {
-        String key = "button_" + type.name().toLowerCase() + "_enabled";
-        prefs.edit().putBoolean(key, enabled).apply();
+        prefs.edit().putBoolean(buttonEnabledKey(type), enabled).apply();
+    }
+    private String buttonEnabledKey(ButtonType type) {
+        switch (type) {
+            case POWER: return "button_power_enabled";
+            case VOLUME_UP: return "button_vol_up_enabled";
+            case VOLUME_DOWN: return "button_vol_down_enabled";
+            case HOME: return "button_home_enabled";
+            case RECENTS: return "button_recents_enabled";
+            case BACK: return "button_back_enabled";
+            default: return "button_power_enabled";
+        }
     }
 
     String getGestureMapping(ButtonType type) {
@@ -126,8 +128,8 @@ final class SettingsStore {
     int globalGestureWidth() { return prefs.getInt("global_gesture_width", 16); }
     void setGlobalGestureWidth(int width) { prefs.edit().putInt("global_gesture_width", width).apply(); }
 
-    boolean hapticFeedback() { return prefs.getBoolean("haptic_feedback", true); }
-    void setHapticFeedback(boolean enabled) { prefs.edit().putBoolean("haptic_feedback", enabled).apply(); }
+    boolean hapticFeedback() { return haptics(); }
+    void setHapticFeedback(boolean enabled) { prefs.edit().putBoolean("haptics", enabled).putBoolean("haptic_feedback", enabled).apply(); }
 
     boolean compactMode() { return prefs.getBoolean("compact_mode", false); }
     void setCompactMode(boolean enabled) { prefs.edit().putBoolean("compact_mode", enabled).apply(); }

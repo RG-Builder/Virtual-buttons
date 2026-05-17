@@ -9,9 +9,12 @@ import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.accessibility.AccessibilityEvent;
-import android.view.accessibility.AccessibilityNodeInfo;
 
 public class VirtualButtonAccessibilityService extends AccessibilityService {
+    private static volatile VirtualButtonAccessibilityService instance;
+
+    static VirtualButtonAccessibilityService getInstance() { return instance; }
+
     private SettingsStore settings;
     private AudioManager audioManager;
     private int maxVolume;
@@ -23,6 +26,7 @@ public class VirtualButtonAccessibilityService extends AccessibilityService {
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
+        instance = this;
         settings = new SettingsStore(this);
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
@@ -47,7 +51,14 @@ public class VirtualButtonAccessibilityService extends AccessibilityService {
 
     @Override
     public boolean onUnbind(Intent intent) {
+        if (instance == this) instance = null;
         return super.onUnbind(intent);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (instance == this) instance = null;
+        super.onDestroy();
     }
 
     public boolean performAction(String action) {
