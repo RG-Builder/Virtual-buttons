@@ -156,12 +156,14 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
         statusDesc.setPadding(0, dp(4), 0, 0);
 
         statusRow.addView(statusIcon);
-        statusRow.addView(createSpacer(dp(16), 0));
+        statusRow.addView(createSpacer(16, 0));
         statusRow.addView(titleView(statusTitle));
 
         statusCard.addView(statusRow);
         statusCard.addView(statusDesc);
-        container.addView(statusCard);
+        LinearLayout.LayoutParams statusLp = new LinearLayout.LayoutParams(-1, -2);
+        statusLp.setMargins(dp(20), 0, dp(20), dp(8));
+        container.addView(statusCard, statusLp);
 
         updateStatus();
     }
@@ -178,7 +180,7 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
         stopBtn.setOnClickListener(v -> stopAllServices());
 
         actions.addView(startBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
-        actions.addView(createSpacer(dp(12), 0));
+        actions.addView(createSpacer(12, 0));
         actions.addView(stopBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
 
         container.addView(actions);
@@ -232,6 +234,7 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
             cb.setText(item);
             cb.setTextSize(15);
             cb.setTextColor(text());
+            cb.setChecked(isToggleEnabled(item));
             cb.setPadding(dp(16), dp(12), dp(16), dp(12));
             cb.setOnCheckedChangeListener((b, c) -> {
                 b.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -493,6 +496,19 @@ public class ModernMainActivity extends Activity implements TextToSpeech.OnInitL
     private void refreshServices() {
         if (settings.overlayEnabled() && Settings.canDrawOverlays(this)) {
             ActionManager.refreshAllServices(this);
+        }
+    }
+
+    private boolean isToggleEnabled(String item) {
+        switch (item) {
+            case "Show Panel": return settings.showButtonPanel();
+            case "Compact Mode": return settings.compactMode();
+            case "Enable Edge Gestures": return settings.edgeGestures();
+            case "Visual Indicator": return settings.visualIndicator();
+            case "Haptic Feedback": return settings.haptics();
+            case "Start on Boot": return settings.startOnBoot();
+            case "Background Running": return settings.backgroundRunning();
+            default: return false;
         }
     }
 

@@ -21,8 +21,10 @@ public class EdgeGestureDetector {
     private final WindowManager windowManager;
     private final EdgeGestureCallback callback;
 
-    private View edgeOverlay;
-    private WindowManager.LayoutParams overlayParams;
+    private View leftEdgeOverlay;
+    private View rightEdgeOverlay;
+    private WindowManager.LayoutParams leftOverlayParams;
+    private WindowManager.LayoutParams rightOverlayParams;
 
     private Handler handler;
     private Runnable longPressRunnable;
@@ -63,23 +65,33 @@ public class EdgeGestureDetector {
     }
 
     private void createOverlayView() {
-        edgeOverlay = new View(context) {
+        leftEdgeOverlay = createOverlayForEdge(-1);
+        rightEdgeOverlay = createOverlayForEdge(1);
+
+        leftOverlayParams = createOverlayParams(Gravity.TOP | Gravity.START);
+        rightOverlayParams = createOverlayParams(Gravity.TOP | Gravity.END);
+    }
+
+    private View createOverlayForEdge(int edge) {
+        View overlay = new View(context) {
             @Override
             public boolean onTouchEvent(MotionEvent event) {
-                return handleTouch(event);
+                return handleTouch(event, edge);
             }
         };
+        overlay.setBackgroundColor(Color.TRANSPARENT);
+        overlay.setClickable(false);
+        overlay.setFocusable(false);
+        return overlay;
+    }
 
-        edgeOverlay.setBackgroundColor(Color.TRANSPARENT);
-        edgeOverlay.setClickable(false);
-        edgeOverlay.setFocusable(false);
-
+    private WindowManager.LayoutParams createOverlayParams(int gravity) {
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY :
                 WindowManager.LayoutParams.TYPE_PHONE;
 
-        overlayParams = new WindowManager.LayoutParams(
-                edgeWidthPx * 2,
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                edgeWidthPx,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 type,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
@@ -87,30 +99,24 @@ public class EdgeGestureDetector {
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
         );
-        overlayParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        overlayParams.alpha = 1f;
+        params.gravity = gravity;
+        params.alpha = 1f;
+        return params;
     }
 
-    private boolean handleTouch(MotionEvent event) {
+    private boolean handleTouch(MotionEvent event, int edge) {
         float x = event.getRawX();
         float y = event.getRawY();
-        int screenWidth = windowManager.getDefaultDisplay().getWidth();
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                boolean nearLeftEdge = x < edgeWidthPx;
-                boolean nearRightEdge = x > screenWidth - edgeWidthPx;
-
-                if (nearLeftEdge || nearRightEdge) {
-                    activeEdge = nearLeftEdge ? -1 : 1;
-                    touchStartX = x;
-                    touchStartY = y;
-                    isTracking = true;
-                    isLongPressTriggered = false;
-                    handler.postDelayed(longPressRunnable, LONG_PRESS_TIMEOUT);
-                    return true;
-                }
-                return false;
+                activeEdge = edge;
+                touchStartX = x;
+                touchStartY = y;
+                isTracking = true;
+                isLongPressTriggered = false;
+                handler.postDelayed(longPressRunnable, LONG_PRESS_TIMEOUT);
+                return true;
 
             case MotionEvent.ACTION_MOVE:
                 if (!isTracking) return false;
@@ -150,8 +156,11 @@ public class EdgeGestureDetector {
 
     public void attach() {
         try {
-            if (edgeOverlay.getParent() == null) {
-                windowManager.addView(edgeOverlay, overlayParams);
+            if (leftEdgeOverlay.getParent() == null) {
+                windowManager.addView(leftEdgeOverlay, leftOverlayParams);
+            }
+            if (rightEdgeOverlay.getParent() == null) {
+                windowManager.addView(rightEdgeOverlay, rightOverlayParams);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -160,8 +169,11 @@ public class EdgeGestureDetector {
 
     public void detach() {
         try {
-            if (edgeOverlay != null && edgeOverlay.getParent() != null) {
-                windowManager.removeView(edgeOverlay);
+            if (leftEdgeOverlay != null && leftEdgeOverlay.getParent() != null) {
+                windowManager.removeView(leftEdgeOverlay);
+            }
+            if (rightEdgeOverlay != null && rightEdgeOverlay.getParent() != null) {
+                windowManager.removeView(rightEdgeOverlay);
             }
         } catch (Exception e) {
             e.printStackTrace();
