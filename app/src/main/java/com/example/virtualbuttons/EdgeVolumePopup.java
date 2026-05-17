@@ -133,7 +133,9 @@ public class EdgeVolumePopup {
         background.setStroke(dp(1), Color.argb(80, 255, 255, 255));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            background.setOutline(new android.graphics.Outline(new android.graphics.Rect(0, 0, dp(80), dp(320))));
+            android.graphics.Outline outline = new android.graphics.Outline();
+            outline.setRect(0, 0, dp(80), dp(320));
+            background.setOutline(outline);
         }
 
         popupContainer.setBackground(background);
