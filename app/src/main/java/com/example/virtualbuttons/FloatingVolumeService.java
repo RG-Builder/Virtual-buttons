@@ -199,8 +199,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
                     showBubble();
                 }
             } else if (ActionManager.ACTION_REFRESH.equals(action)) {
-                stopService(new Intent(this, FloatingVolumeService.class));
-                ActionManager.startFloatingService(this);
+                refreshOverlays();
             } else if (ActionManager.ACTION_DISMISS_NOTIFICATION.equals(action)) {
                 hideBubble(true);
                 stopSelf();
@@ -451,7 +450,7 @@ public class FloatingVolumeService extends Service implements SensorEventListene
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     private Notification notification() {
-        PendingIntent open = PendingIntent.getActivity(this, 1, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = PendingIntent.getActivity(this, 1, new Intent(this, ModernMainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         PendingIntent up = actionIntent(ActionManager.ACTION_VOLUME_UP, 2);
         PendingIntent down = actionIntent(ActionManager.ACTION_VOLUME_DOWN, 3);
         PendingIntent mute = actionIntent(ActionManager.ACTION_TOGGLE_MUTE, 4);
@@ -474,6 +473,17 @@ public class FloatingVolumeService extends Service implements SensorEventListene
             nb.addAction(R.drawable.ic_volume, "Hide", dismiss);
         }
         return nb.build();
+    }
+
+    private void refreshOverlays() {
+        remove(bubble);
+        remove(indicator);
+        bubble = null;
+        indicator = null;
+        refreshEdgeGestures();
+        if (settings.overlayEnabled() && Settings.canDrawOverlays(this) && !settings.backgroundRunning()) {
+            showBubble();
+        }
     }
 
     private PendingIntent actionIntent(String action, int requestCode) {

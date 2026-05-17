@@ -321,20 +321,26 @@ public class EnhancedGestureService extends Service {
                 try { Runtime.getRuntime().exec("input keyevent KEYCODE_POWER"); } catch (Exception ignored) {}
                 break;
             case ActionManager.ACTION_BUTTON_HOME:
-                Intent homeIntent = new Intent(android.content.Intent.ACTION_MAIN);
-                homeIntent.addCategory(android.content.Intent.CATEGORY_HOME);
-                homeIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(homeIntent);
+                if (!ActionManager.performAccessibilityAction(action)) {
+                    Intent homeIntent = new Intent(android.content.Intent.ACTION_MAIN);
+                    homeIntent.addCategory(android.content.Intent.CATEGORY_HOME);
+                    homeIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(homeIntent);
+                }
                 break;
             case ActionManager.ACTION_BUTTON_RECENTS:
-                try {
-                    Intent recents = new Intent("com.android.systemui.recents.TOGGLE_RECENTS");
-                    recents.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(recents);
-                } catch (Exception ignored) {}
+                if (!ActionManager.performAccessibilityAction(action)) {
+                    try {
+                        Intent recents = new Intent("com.android.systemui.recents.TOGGLE_RECENTS");
+                        recents.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(recents);
+                    } catch (Exception ignored) {}
+                }
                 break;
             case ActionManager.ACTION_BUTTON_BACK:
-                try { Runtime.getRuntime().exec("input keyevent 4"); } catch (Exception ignored) {}
+                if (!ActionManager.performAccessibilityAction(action)) {
+                    try { Runtime.getRuntime().exec("input keyevent 4"); } catch (Exception ignored) {}
+                }
                 break;
         }
     }

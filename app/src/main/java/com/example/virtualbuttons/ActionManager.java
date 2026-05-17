@@ -6,7 +6,6 @@ import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -38,6 +37,7 @@ public final class ActionManager {
     static void ensureChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager nm = context.getSystemService(NotificationManager.class);
+            if (nm == null) return;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Volume controls", NotificationManager.IMPORTANCE_LOW);
             channel.setDescription("Persistent controls for the virtual volume button");
             nm.createNotificationChannel(channel);
@@ -51,32 +51,27 @@ public final class ActionManager {
         return new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
     }
 
-    static void startButtonPanelService(Context context) {
-        Intent intent = new Intent(context, ButtonPanelService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
-        else context.startService(intent);
+    static boolean startButtonPanelService(Context context) {
+        return startServiceSafely(context, new Intent(context, ButtonPanelService.class), true);
     }
 
-    static void stopButtonPanelService(Context context) {
-        Intent intent = new Intent(context, ButtonPanelService.class).setAction(ACTION_STOP);
-        context.startService(intent);
+    static boolean stopButtonPanelService(Context context) {
+        return startServiceSafely(context, new Intent(context, ButtonPanelService.class).setAction(ACTION_STOP), false);
     }
 
-    static void startEnhancedGestureService(Context context) {
-        Intent intent = new Intent(context, EnhancedGestureService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
-        else context.startService(intent);
+    static boolean startEnhancedGestureService(Context context) {
+        return startServiceSafely(context, new Intent(context, EnhancedGestureService.class), true);
     }
 
-    static void stopEnhancedGestureService(Context context) {
-        Intent intent = new Intent(context, EnhancedGestureService.class).setAction(ACTION_STOP);
-        context.startService(intent);
+    static boolean stopEnhancedGestureService(Context context) {
+        return startServiceSafely(context, new Intent(context, EnhancedGestureService.class).setAction(ACTION_STOP), false);
     }
 
-    static void refreshAllServices(Context context) {
-        refreshService(context);
-        startButtonPanelService(context);
-        startEnhancedGestureService(context);
+    static boolean refreshAllServices(Context context) {
+        boolean floatingStarted = startFloatingService(context);
+        boolean panelStarted = startButtonPanelService(context);
+        boolean gestureStarted = startEnhancedGestureService(context);
+        return floatingStarted && panelStarted && gestureStarted;
     }
 
     static boolean isAccessibilityServiceEnabled(Context context) {
@@ -102,30 +97,39 @@ public final class ActionManager {
         return am != null && am.canScheduleExactAlarms();
     }
 
-    static void startFloatingService(Context context) {
-        Intent intent = new Intent(context, FloatingVolumeService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
-        else context.startService(intent);
+    static boolean startFloatingService(Context context) {
+        return startServiceSafely(context, new Intent(context, FloatingVolumeService.class), true);
     }
 
-    static void showBubble(Context context) {
-        Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_SHOW_BUBBLE);
-        context.startService(intent);
+    static boolean showBubble(Context context) {
+        return startServiceSafely(context, new Intent(context, FloatingVolumeService.class).setAction(ACTION_SHOW_BUBBLE), true);
     }
 
-    static void startBackground(Context context) {
-        Intent intent = new Intent(context, FloatingVolumeService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
-        else context.startService(intent);
+    static boolean startBackground(Context context) {
+        return startFloatingService(context);
     }
 
-    static void refreshService(Context context) {
-        Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_REFRESH);
-        context.startService(intent);
+    static boolean refreshService(Context context) {
+        return startServiceSafely(context, new Intent(context, FloatingVolumeService.class).setAction(ACTION_REFRESH), true);
     }
 
-    static void stopFloatingService(Context context) {
-        Intent intent = new Intent(context, FloatingVolumeService.class).setAction(ACTION_STOP);
-        context.startService(intent);
+    static boolean stopFloatingService(Context context) {
+        return startServiceSafely(context, new Intent(context, FloatingVolumeService.class).setAction(ACTION_STOP), false);
+    }
+
+    static boolean performAccessibilityAction(String action) {
+        VirtualButtonAccessibilityService service = VirtualButtonAccessibilityService.getInstance();
+        return service != null && service.performAction(action);
+    }
+
+    private static boolean startServiceSafely(Context context, Intent intent, boolean asForeground) {
+        try {
+            if (asForeground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
+            else context.startService(intent);
+            return true;
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

@@ -48,19 +48,28 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private static final AccelerateDecelerateInterpolator ACCEL_DECEL = new AccelerateDecelerateInterpolator();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
-        settings = new SettingsStore(this);
-        darkMode = settings.darkMode();
-        if (darkMode) setTheme(R.style.AppTheme_Dark);
-        else setTheme(R.style.AppTheme);
-        super.onCreate(savedInstanceState);
-        tts = new TextToSpeech(this, this);
-        buildUi();
-        animateEntrance();
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5);
-        }
-        if (!settings.onboardingDone() && Settings.canDrawOverlays(this)) {
-            startActivity(new Intent(this, TutorialActivity.class));
+        try {
+            settings = new SettingsStore(this);
+            darkMode = settings.darkMode();
+            if (darkMode) setTheme(R.style.AppTheme_Dark);
+            else setTheme(R.style.AppTheme);
+            super.onCreate(savedInstanceState);
+            tts = new TextToSpeech(this, this);
+            buildUi();
+            animateEntrance();
+            if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5);
+            }
+            if (!settings.onboardingDone() && Settings.canDrawOverlays(this)) {
+                startActivity(new Intent(this, TutorialActivity.class));
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            TextView message = new TextView(this);
+            message.setText("Virtual Buttons could not load. Try clearing app data or reinstalling.\n\n" + e.getClass().getSimpleName());
+            message.setTextSize(16);
+            message.setPadding(dp(24), dp(48), dp(24), dp(24));
+            setContentView(message);
         }
     }
 
@@ -175,7 +184,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         btnRow.addView(primaryBtn);
         btnRow.addView(stopBtn);
 
-        primaryBtn.setOnClickListener(v -> { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); animatePress(v); if (!Settings.canDrawOverlays(this)) { startActivity(ActionManager.overlaySettingsIntent(this)); } else { checkBatteryOptimization(); settings.setOverlayEnabled(true); ActionManager.startFloatingService(this); refreshStatus(); } });
+        primaryBtn.setOnClickListener(v -> { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); animatePress(v); if (!Settings.canDrawOverlays(this)) { startActivity(ActionManager.overlaySettingsIntent(this)); } else { checkBatteryOptimization(); settings.setOverlayEnabled(true); ActionManager.refreshAllServices(this); refreshStatus(); } });
         stopBtn.setOnClickListener(v -> { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); animatePress(v); if (settings.backgroundRunning()) settings.setBackgroundRunning(false); settings.setOverlayEnabled(false); ActionManager.stopFloatingService(this); refreshStatus(); });
 
         card.addView(status);

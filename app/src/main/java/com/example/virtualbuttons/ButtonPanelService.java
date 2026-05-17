@@ -65,6 +65,15 @@ public class ButtonPanelService extends Service implements SensorEventListener {
         ActionManager.ACTION_BUTTON_BACK
     };
 
+    private static final SettingsStore.ButtonType[] BUTTON_TYPES = {
+        SettingsStore.ButtonType.POWER,
+        SettingsStore.ButtonType.VOLUME_UP,
+        SettingsStore.ButtonType.VOLUME_DOWN,
+        SettingsStore.ButtonType.HOME,
+        SettingsStore.ButtonType.RECENTS,
+        SettingsStore.ButtonType.BACK
+    };
+
     @Override public void onCreate() {
         super.onCreate();
         settings = new SettingsStore(this);
@@ -155,7 +164,10 @@ public class ButtonPanelService extends Service implements SensorEventListener {
         icon.setLayoutParams(iconLp);
         btn.addView(icon);
 
-        btn.setContentDescription(getButtonDescription(idx));
+        boolean enabled = settings.buttonEnabled(BUTTON_TYPES[idx]);
+        btn.setContentDescription(getButtonDescription(idx) + (enabled ? "" : " disabled"));
+        btn.setEnabled(enabled);
+        btn.setAlpha(enabled ? 1f : 0.35f);
         btn.setTag(BUTTON_ACTIONS[idx]);
 
         GradientDrawable bg = new GradientDrawable();
@@ -167,7 +179,9 @@ public class ButtonPanelService extends Service implements SensorEventListener {
         lp.setMargins(dp(2), dp(2), dp(2), dp(2));
         btn.setLayoutParams(lp);
 
-        btn.setOnClickListener(v -> handleButtonClick(idx));
+        btn.setOnClickListener(v -> {
+            if (settings.buttonEnabled(BUTTON_TYPES[idx])) handleButtonClick(idx);
+        });
 
         return btn;
     }
@@ -203,32 +217,37 @@ public class ButtonPanelService extends Service implements SensorEventListener {
                 adjustVolume(-1);
                 break;
             case ActionManager.ACTION_BUTTON_HOME:
-                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-                homeIntent.addCategory(Intent.CATEGORY_HOME);
-                homeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(homeIntent);
+                if (!ActionManager.performAccessibilityAction(action)) {
+                    Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                    homeIntent.addCategory(Intent.CATEGORY_HOME);
+                    homeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(homeIntent);
+                }
                 break;
             case ActionManager.ACTION_BUTTON_RECENTS:
-                try {
-                    Intent recents = new Intent("com.android.systemui.recents.TOGGLE_RECENTS");
-                    recents.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(recents);
-                } catch (Exception e) {
+                if (!ActionManager.performAccessibilityAction(action)) {
                     try {
-                        Intent overview = new Intent(Intent.ACTION_VIEW);
-                        overview.setAction("android.intent.action.ASSIST");
-                        overview.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(overview);
-                    } catch (Exception ex) {}
+                        Intent recents = new Intent("com.android.systemui.recents.TOGGLE_RECENTS");
+                        recents.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(recents);
+                    } catch (Exception e) {
+                        try {
+                            Intent overview = new Intent(Intent.ACTION_ASSIST);
+                            overview.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(overview);
+                        } catch (Exception ex) {}
+                    }
                 }
                 break;
             case ActionManager.ACTION_BUTTON_BACK:
-                try {
-                    Runtime.getRuntime().exec("input keyevent KEYCODE_BACK");
-                } catch (Exception e) {
+                if (!ActionManager.performAccessibilityAction(action)) {
                     try {
-                        Runtime.getRuntime().exec("input keyevent 4");
-                    } catch (Exception ex) {}
+                        Runtime.getRuntime().exec("input keyevent KEYCODE_BACK");
+                    } catch (Exception e) {
+                        try {
+                            Runtime.getRuntime().exec("input keyevent 4");
+                        } catch (Exception ex) {}
+                    }
                 }
                 break;
         }
