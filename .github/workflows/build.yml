@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: VirtualButtons
-          path: app/build/outputs/apk/debug/VirtualButtons.apk
+          path: app/build/outputs/apk/debug/*.apk
 
   release:
     needs: build
@@ -53,7 +53,7 @@ jobs:
         run: |
           git fetch origin +refs/heads/releases:refs/heads/releases || true
           git checkout releases 2>/dev/null || git checkout --orphan releases
-          cp ./apk/VirtualButtons.apk ./VirtualButtons.apk
+          cp ./apk/*.apk ./VirtualButtons.apk
           git add VirtualButtons.apk
           git -c user.email=action@github.com -c user.name="GitHub Action" commit -m "Release APK" || exit 0
           git push -f origin releases
@@ -61,13 +61,18 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./apk/VirtualButtons.apk
+          files: ./apk/*.apk
           draft: false
           prerelease: false
           tag_name: latest
-          name: "Virtual Buttons v1.0.1"
+          name: "Virtual Buttons v1.1.0"
           body: |
-            Latest build
+            ## v1.1.0
+            
+            - Upgraded to AGP 9.2.1 and Gradle 9.5.1
+            - Enhanced edge gestures with adaptive controls and feedback
+            - Fix edge gestures to use vertical swipes for volume only
+            - General stability improvements
             
             Download: VirtualButtons.apk
             
