@@ -115,7 +115,7 @@ public class EnhancedGestureService extends Service {
         view.setTag(position);
         view.setOnTouchListener(new EdgeTouchListener(position));
         String[] descriptions = {"Top edge - Swipe down for volume up", "Bottom edge - Swipe up for volume down",
-            "Left edge - Swipe right for back, tap for home", "Right edge - Swipe left for recents, tap for power"};
+            "Left edge - Swipe up/down for volume", "Right edge - Swipe up/down for volume"};
         view.setContentDescription(descriptions[position]);
         return view;
     }
@@ -278,12 +278,7 @@ public class EnhancedGestureService extends Service {
         }
 
         private void handleTap(int pos) {
-            haptic();
-            switch (pos) {
-                case 2: executeAction(ActionManager.ACTION_BUTTON_HOME); break;
-                case 3: executeAction(ActionManager.ACTION_BUTTON_POWER); break;
-                default: break;
-            }
+            // Intentionally no-op: edge gestures should not trigger navigation/power actions on tap.
         }
 
         private void handleSwipe(int pos, float dx, float dy) {
@@ -298,12 +293,9 @@ public class EnhancedGestureService extends Service {
                     else if (dy > dp(30)) executeAction(ActionManager.ACTION_VOLUME_DOWN);
                     break;
                 case 2:
-                    // Left edge supports a single, predictable inward swipe action (Back).
-                    if (dx > dp(30)) executeAction(ActionManager.ACTION_BUTTON_BACK);
-                    break;
                 case 3:
-                    // Right edge supports a single, predictable inward swipe action (Recents).
-                    if (dx < -dp(30)) executeAction(ActionManager.ACTION_BUTTON_RECENTS);
+                    if (dy < -dp(30)) executeAction(ActionManager.ACTION_VOLUME_UP);
+                    else if (dy > dp(30)) executeAction(ActionManager.ACTION_VOLUME_DOWN);
                     break;
             }
         }
