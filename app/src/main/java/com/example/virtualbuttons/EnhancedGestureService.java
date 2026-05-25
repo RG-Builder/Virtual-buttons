@@ -115,7 +115,7 @@ public class EnhancedGestureService extends Service {
         view.setTag(position);
         view.setOnTouchListener(new EdgeTouchListener(position));
         String[] descriptions = {"Top edge - Swipe down for volume up", "Bottom edge - Swipe up for volume down",
-            "Left edge - Swipe right for back, tap for home", "Right edge - Swipe left for recents, tap for power"};
+            "Left edge - Swipe up/down for volume, tap for home", "Right edge - Swipe up/down for volume, tap for power"};
         view.setContentDescription(descriptions[position]);
         return view;
     }
@@ -298,12 +298,14 @@ public class EnhancedGestureService extends Service {
                     else if (dy > dp(30)) executeAction(ActionManager.ACTION_VOLUME_DOWN);
                     break;
                 case 2:
-                    if (dx > dp(30)) executeAction(ActionManager.ACTION_BUTTON_BACK);
-                    else if (dx < -dp(30)) executeAction(ActionManager.ACTION_BUTTON_RECENTS);
+                    // Side edges use vertical swipes for volume control to avoid horizontal app navigation gestures.
+                    if (dy < -dp(30)) executeAction(ActionManager.ACTION_VOLUME_UP);
+                    else if (dy > dp(30)) executeAction(ActionManager.ACTION_VOLUME_DOWN);
                     break;
                 case 3:
-                    if (dx < -dp(30)) executeAction(ActionManager.ACTION_BUTTON_RECENTS);
-                    else if (dx > dp(30)) executeAction(ActionManager.ACTION_BUTTON_HOME);
+                    // Side edges use vertical swipes for volume control to avoid horizontal app navigation gestures.
+                    if (dy < -dp(30)) executeAction(ActionManager.ACTION_VOLUME_UP);
+                    else if (dy > dp(30)) executeAction(ActionManager.ACTION_VOLUME_DOWN);
                     break;
             }
         }
