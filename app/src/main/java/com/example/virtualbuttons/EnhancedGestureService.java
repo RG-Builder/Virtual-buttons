@@ -298,12 +298,12 @@ public class EnhancedGestureService extends Service {
                     else if (dy > dp(30)) executeAction(ActionManager.ACTION_VOLUME_DOWN);
                     break;
                 case 2:
+                    // Left edge supports a single, predictable inward swipe action (Back).
                     if (dx > dp(30)) executeAction(ActionManager.ACTION_BUTTON_BACK);
-                    else if (dx < -dp(30)) executeAction(ActionManager.ACTION_BUTTON_RECENTS);
                     break;
                 case 3:
+                    // Right edge supports a single, predictable inward swipe action (Recents).
                     if (dx < -dp(30)) executeAction(ActionManager.ACTION_BUTTON_RECENTS);
-                    else if (dx > dp(30)) executeAction(ActionManager.ACTION_BUTTON_HOME);
                     break;
             }
         }
