@@ -3,141 +3,162 @@ package com.example.virtualbuttons;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-final class SettingsStore {
-    enum StreamMode { MEDIA, SYSTEM, ACTIVE }
-    enum GestureMode { SWIPE, DOUBLE_TAP, BOTH }
-    enum ButtonType { POWER, VOLUME_UP, VOLUME_DOWN, HOME, RECENTS, BACK }
-    enum GestureDirection { UP, DOWN, LEFT, RIGHT, TAP, LONG_PRESS, DOUBLE_TAP }
+public class SettingsStore {
+    private static final String PREF_NAME = "virtual_buttons_gesture";
+    private static final String KEY_PILL_ENABLED = "pill_enabled";
+    private static final String KEY_EDGE_GESTURES_ENABLED = "edge_gestures_enabled";
+    private static final String KEY_GESTURE_SENSITIVITY = "gesture_sensitivity";
+    private static final String KEY_EDGE_WIDTH = "edge_width";
+    private static final String KEY_ANIMATION_SPEED = "animation_speed";
+    private static final String KEY_HAPTIC_INTENSITY = "haptic_intensity";
+    private static final String KEY_PILL_COLOR = "pill_color";
+    private static final String KEY_PILL_OPACITY = "pill_opacity";
+    private static final String KEY_PILL_SIZE = "pill_size";
+    private static final String KEY_DOUBLE_TAP_LOCK = "double_tap_lock";
+    private static final String KEY_CORNER_GESTURES = "corner_gestures";
+    private static final String KEY_RADIAL_MENU = "radial_menu";
+    private static final String KEY_TWO_FINGER_MEDIA = "two_finger_media";
+    private static final String KEY_VOLUME_STREAM = "volume_stream";
+    private static final String KEY_SHOW_INDICATORS = "show_indicators";
+    private static final String KEY_DARK_MODE = "dark_mode";
+    private static final String KEY_AUTO_START = "auto_start";
+    private static final String KEY_COOLDOWN_MS = "cooldown_ms";
 
-    private static final String PREFS = "virtual_button_settings";
+    private static final String KEY_NOTIFICATION_MODE = "notification_mode";
+    private static final String KEY_AUTO_RESTART = "auto_restart";
+    private static final String KEY_SERVICE_PROTECTION = "service_protection";
+    private static final String KEY_ACC_MONITORING = "acc_monitoring";
+    private static final String KEY_BATTERY_OPT_DISMISSED = "battery_opt_dismissed";
+    private static final String KEY_WATCHDOG_ENABLED = "watchdog_enabled";
+
+    private static final String KEY_CONTEXT_AWARE = "context_aware";
+    private static final String KEY_ANTI_ACCIDENTAL = "anti_accidental";
+    private static final String KEY_ADAPTIVE_LEARNING = "adaptive_learning";
+    private static final String KEY_GAMING_MODE = "gaming_mode";
+    private static final String KEY_GAMING_MODE_VALUE = "gaming_mode_value";
+    private static final String KEY_SCROLL_DETECTION = "scroll_detection";
+    private static final String KEY_TYPING_DETECTION = "typing_detection";
+    private static final String KEY_RESPECT_BACK_GESTURE = "respect_back_gesture";
+    private static final String KEY_EDGE_SHRINK_FULLSCREEN = "edge_shrink_fullscreen";
+    private static final String KEY_PILL_AUTO_HIDE_GAMING = "pill_auto_hide_gaming";
+
+    public static final int NOTIF_MODE_NORMAL = 0;
+    public static final int NOTIF_MODE_MINIMAL = 1;
+    public static final int NOTIF_MODE_STEALTH = 2;
+    public static final int GAMING_MODE_OFF = 0;
+    public static final int GAMING_MODE_AUTO = 1;
+    public static final int GAMING_MODE_ON = 2;
+
     private final SharedPreferences prefs;
 
-    SettingsStore(Context context) {
-        prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    public SettingsStore(Context context) {
+        prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
     }
 
-    boolean overlayEnabled() { return prefs.getBoolean("overlay_enabled", false); }
-    void setOverlayEnabled(boolean enabled) { prefs.edit().putBoolean("overlay_enabled", enabled).apply(); }
-    int buttonX() { return prefs.getInt("button_x", 24); }
-    int buttonY() { return prefs.getInt("button_y", 360); }
-    void setButtonPosition(int x, int y) { prefs.edit().putInt("button_x", x).putInt("button_y", y).apply(); }
-    int buttonSizeDp() { return prefs.getInt("button_size", 64); }
-    int buttonOpacity() { return prefs.getInt("button_opacity", 86); }
-    int volumeStep() { return prefs.getInt("volume_step", 1); }
-    int gestureSensitivity() { return prefs.getInt("gesture_sensitivity", 24); }
-    GestureMode gestureMode() {
-        try { return GestureMode.valueOf(prefs.getString("gesture_mode", GestureMode.BOTH.name())); }
-        catch (Exception e) { return GestureMode.BOTH; }
-    }
-    StreamMode streamMode() {
-        try { return StreamMode.valueOf(prefs.getString("stream_mode", StreamMode.ACTIVE.name())); }
-        catch (Exception e) { return StreamMode.ACTIVE; }
-    }
-    boolean edgeGestures() { return prefs.getBoolean("edge_gestures", true); }
-    int edgeWidthDp() { return prefs.getInt("edge_width", 12); }
-    boolean shakeToMute() { return prefs.getBoolean("shake_to_mute", false); }
-    int shakeThreshold() { return prefs.getInt("shake_threshold", 270); }
-    int bubbleColorHue() { return prefs.getInt("bubble_color_hue", 265); }
-    boolean haptics() { return prefs.getBoolean("haptics", prefs.getBoolean("haptic_feedback", true)); }
-    boolean visualIndicator() { return prefs.getBoolean("visual_indicator", true); }
-    boolean autoNightProfile() { return prefs.getBoolean("auto_night_profile", false); }
-    int nightVolumePercent() { return prefs.getInt("night_volume", 25); }
-    int nightStartHour() { return prefs.getInt("night_start", 22); }
-    int nightEndHour() { return prefs.getInt("night_end", 7); }
-    boolean startOnBoot() { return prefs.getBoolean("start_on_boot", true); }
-    boolean hideNotification() { return prefs.getBoolean("hide_notification", false); }
-    void setHideNotification(boolean hide) { prefs.edit().putBoolean("hide_notification", hide).apply(); }
-    boolean backgroundRunning() { return prefs.getBoolean("background_running", false); }
-    void setBackgroundRunning(boolean running) { prefs.edit().putBoolean("background_running", running).apply(); }
-    int lastAudibleMedia() { return prefs.getInt("last_audible_media", -1); }
-    void setLastAudibleMedia(int value) { prefs.edit().putInt("last_audible_media", value).apply(); }
-    int preNightVolume() { return prefs.getInt("pre_night_volume", -1); }
-    void setPreNightVolume(int value) { prefs.edit().putInt("pre_night_volume", value).apply(); }
-    boolean darkMode() { return prefs.getBoolean("dark_mode", false); }
-    void setDarkMode(boolean enabled) { prefs.edit().putBoolean("dark_mode", enabled).apply(); }
-    boolean onboardingDone() { return prefs.getBoolean("onboarding_done", false); }
-    void setOnboardingDone(boolean done) { prefs.edit().putBoolean("onboarding_done", done).apply(); }
-    boolean accessibilitySpeech() { return prefs.getBoolean("accessibility_speech", false); }
-    int activePreset() { return prefs.getInt("active_preset", -1); }
-    void setActivePreset(int preset) { prefs.edit().putInt("active_preset", preset).apply(); }
+    public boolean isPillEnabled() { return prefs.getBoolean(KEY_PILL_ENABLED, true); }
+    public void setPillEnabled(boolean v) { prefs.edit().putBoolean(KEY_PILL_ENABLED, v).apply(); }
 
-    boolean buttonEnabled(ButtonType type) {
-        return prefs.getBoolean(buttonEnabledKey(type), true);
-    }
-    void setButtonEnabled(ButtonType type, boolean enabled) {
-        prefs.edit().putBoolean(buttonEnabledKey(type), enabled).apply();
-    }
-    private String buttonEnabledKey(ButtonType type) {
-        switch (type) {
-            case POWER: return "button_power_enabled";
-            case VOLUME_UP: return "button_vol_up_enabled";
-            case VOLUME_DOWN: return "button_vol_down_enabled";
-            case HOME: return "button_home_enabled";
-            case RECENTS: return "button_recents_enabled";
-            case BACK: return "button_back_enabled";
-            default: return "button_power_enabled";
-        }
-    }
+    public boolean isEdgeGesturesEnabled() { return prefs.getBoolean(KEY_EDGE_GESTURES_ENABLED, true); }
+    public void setEdgeGesturesEnabled(boolean v) { prefs.edit().putBoolean(KEY_EDGE_GESTURES_ENABLED, v).apply(); }
 
-    String getGestureMapping(ButtonType type) {
-        String key = "gesture_" + type.name().toLowerCase();
-        return prefs.getString(key, getDefaultGesture(type));
-    }
-    void setGestureMapping(ButtonType type, String gesture) {
-        String key = "gesture_" + type.name().toLowerCase();
-        prefs.edit().putString(key, gesture).apply();
-    }
-    private String getDefaultGesture(ButtonType type) {
-        switch (type) {
-            case POWER: return "LONG_PRESS";
-            case VOLUME_UP: return "UP";
-            case VOLUME_DOWN: return "DOWN";
-            case HOME: return "TAP";
-            case RECENTS: return "DOUBLE_TAP";
-            case BACK: return "LEFT";
-            default: return "TAP";
-        }
-    }
+    public int getGestureSensitivity() { return prefs.getInt(KEY_GESTURE_SENSITIVITY, 50); }
+    public void setGestureSensitivity(int v) { prefs.edit().putInt(KEY_GESTURE_SENSITIVITY, v).apply(); }
 
-    boolean edgeGestureEnabled(ButtonType type) {
-        return prefs.getBoolean("edge_" + type.name().toLowerCase() + "_enabled", isDefaultEdgeEnabled(type));
-    }
-    void setEdgeGestureEnabled(ButtonType type, boolean enabled) {
-        String key = "edge_" + type.name().toLowerCase() + "_enabled";
-        prefs.edit().putBoolean(key, enabled).apply();
-    }
-    private boolean isDefaultEdgeEnabled(ButtonType type) {
-        return type == ButtonType.VOLUME_UP || type == ButtonType.VOLUME_DOWN;
-    }
+    public int getEdgeWidth() { return prefs.getInt(KEY_EDGE_WIDTH, 24); }
+    public void setEdgeWidth(int v) { prefs.edit().putInt(KEY_EDGE_WIDTH, v).apply(); }
 
-    int buttonPanelPosition() { return prefs.getInt("button_panel_position", 0); }
-    void setButtonPanelPosition(int pos) { prefs.edit().putInt("button_panel_position", pos).apply(); }
+    public int getAnimationSpeed() { return prefs.getInt(KEY_ANIMATION_SPEED, 50); }
+    public void setAnimationSpeed(int v) { prefs.edit().putInt(KEY_ANIMATION_SPEED, v).apply(); }
 
-    int buttonPanelSize() { return prefs.getInt("button_panel_size", 56); }
-    void setButtonPanelSize(int size) { prefs.edit().putInt("button_panel_size", size).apply(); }
+    public int getHapticIntensity() { return prefs.getInt(KEY_HAPTIC_INTENSITY, 50); }
+    public void setHapticIntensity(int v) { prefs.edit().putInt(KEY_HAPTIC_INTENSITY, v).apply(); }
 
-    int buttonPanelOpacity() { return prefs.getInt("button_panel_opacity", 90); }
-    void setButtonPanelOpacity(int opacity) { prefs.edit().putInt("button_panel_opacity", opacity).apply(); }
+    public int getPillColor() { return prefs.getInt(KEY_PILL_COLOR, 0xFF6750A4); }
+    public void setPillColor(int v) { prefs.edit().putInt(KEY_PILL_COLOR, v).apply(); }
 
-    boolean showButtonPanel() { return prefs.getBoolean("show_button_panel", true); }
-    void setShowButtonPanel(boolean show) { prefs.edit().putBoolean("show_button_panel", show).apply(); }
+    public int getPillOpacity() { return prefs.getInt(KEY_PILL_OPACITY, 70); }
+    public void setPillOpacity(int v) { prefs.edit().putInt(KEY_PILL_OPACITY, v).apply(); }
 
-    int globalGestureSensitivity() { return prefs.getInt("global_gesture_sensitivity", 50); }
-    void setGlobalGestureSensitivity(int sensitivity) { prefs.edit().putInt("global_gesture_sensitivity", sensitivity).apply(); }
+    public int getPillSize() { return prefs.getInt(KEY_PILL_SIZE, 48); }
+    public void setPillSize(int v) { prefs.edit().putInt(KEY_PILL_SIZE, v).apply(); }
 
-    int globalGestureWidth() { return prefs.getInt("global_gesture_width", 16); }
-    void setGlobalGestureWidth(int width) { prefs.edit().putInt("global_gesture_width", width).apply(); }
+    public boolean isDoubleTapLockEnabled() { return prefs.getBoolean(KEY_DOUBLE_TAP_LOCK, true); }
+    public void setDoubleTapLockEnabled(boolean v) { prefs.edit().putBoolean(KEY_DOUBLE_TAP_LOCK, v).apply(); }
 
-    boolean hapticFeedback() { return haptics(); }
-    void setHapticFeedback(boolean enabled) { prefs.edit().putBoolean("haptics", enabled).putBoolean("haptic_feedback", enabled).apply(); }
+    public boolean isCornerGesturesEnabled() { return prefs.getBoolean(KEY_CORNER_GESTURES, true); }
+    public void setCornerGesturesEnabled(boolean v) { prefs.edit().putBoolean(KEY_CORNER_GESTURES, v).apply(); }
 
-    boolean compactMode() { return prefs.getBoolean("compact_mode", false); }
-    void setCompactMode(boolean enabled) { prefs.edit().putBoolean("compact_mode", enabled).apply(); }
+    public boolean isRadialMenuEnabled() { return prefs.getBoolean(KEY_RADIAL_MENU, true); }
+    public void setRadialMenuEnabled(boolean v) { prefs.edit().putBoolean(KEY_RADIAL_MENU, v).apply(); }
 
-    int themeStyle() { return prefs.getInt("theme_style", 0); }
-    void setThemeStyle(int style) { prefs.edit().putInt("theme_style", style).apply(); }
+    public boolean isTwoFingerMediaEnabled() { return prefs.getBoolean(KEY_TWO_FINGER_MEDIA, true); }
+    public void setTwoFingerMediaEnabled(boolean v) { prefs.edit().putBoolean(KEY_TWO_FINGER_MEDIA, v).apply(); }
 
-    void putInt(String key, int value) { prefs.edit().putInt(key, value).apply(); }
-    void putBoolean(String key, boolean value) { prefs.edit().putBoolean(key, value).apply(); }
-    void putString(String key, String value) { prefs.edit().putString(key, value).apply(); }
+    public int getVolumeStream() { return prefs.getInt(KEY_VOLUME_STREAM, 0); }
+    public void setVolumeStream(int v) { prefs.edit().putInt(KEY_VOLUME_STREAM, v).apply(); }
+
+    public boolean isShowIndicators() { return prefs.getBoolean(KEY_SHOW_INDICATORS, true); }
+    public void setShowIndicators(boolean v) { prefs.edit().putBoolean(KEY_SHOW_INDICATORS, v).apply(); }
+
+    public boolean isDarkMode() { return prefs.getBoolean(KEY_DARK_MODE, false); }
+    public void setDarkMode(boolean v) { prefs.edit().putBoolean(KEY_DARK_MODE, v).apply(); }
+
+    public boolean isAutoStart() { return prefs.getBoolean(KEY_AUTO_START, true); }
+    public void setAutoStart(boolean v) { prefs.edit().putBoolean(KEY_AUTO_START, v).apply(); }
+
+    public int getCooldownMs() { return prefs.getInt(KEY_COOLDOWN_MS, 200); }
+    public void setCooldownMs(int v) { prefs.edit().putInt(KEY_COOLDOWN_MS, v).apply(); }
+
+    public int getNotificationMode() { return prefs.getInt(KEY_NOTIFICATION_MODE, NOTIF_MODE_NORMAL); }
+    public void setNotificationMode(int v) { prefs.edit().putInt(KEY_NOTIFICATION_MODE, v).apply(); }
+
+    public boolean isAutoRestartEnabled() { return prefs.getBoolean(KEY_AUTO_RESTART, true); }
+    public void setAutoRestartEnabled(boolean v) { prefs.edit().putBoolean(KEY_AUTO_RESTART, v).apply(); }
+
+    public boolean isServiceProtectionEnabled() { return prefs.getBoolean(KEY_SERVICE_PROTECTION, true); }
+    public void setServiceProtectionEnabled(boolean v) { prefs.edit().putBoolean(KEY_SERVICE_PROTECTION, v).apply(); }
+
+    public boolean isAccMonitoringEnabled() { return prefs.getBoolean(KEY_ACC_MONITORING, true); }
+    public void setAccMonitoringEnabled(boolean v) { prefs.edit().putBoolean(KEY_ACC_MONITORING, v).apply(); }
+
+    public boolean isBatteryOptDismissed() { return prefs.getBoolean(KEY_BATTERY_OPT_DISMISSED, false); }
+    public void setBatteryOptDismissed(boolean v) { prefs.edit().putBoolean(KEY_BATTERY_OPT_DISMISSED, v).apply(); }
+
+    public boolean isWatchdogEnabled() { return prefs.getBoolean(KEY_WATCHDOG_ENABLED, true); }
+    public void setWatchdogEnabled(boolean v) { prefs.edit().putBoolean(KEY_WATCHDOG_ENABLED, v).apply(); }
+
+    public boolean isContextAwareEnabled() { return prefs.getBoolean(KEY_CONTEXT_AWARE, true); }
+    public void setContextAwareEnabled(boolean v) { prefs.edit().putBoolean(KEY_CONTEXT_AWARE, v).apply(); }
+
+    public boolean isAntiAccidentalEnabled() { return prefs.getBoolean(KEY_ANTI_ACCIDENTAL, true); }
+    public void setAntiAccidentalEnabled(boolean v) { prefs.edit().putBoolean(KEY_ANTI_ACCIDENTAL, v).apply(); }
+
+    public boolean isAdaptiveLearningEnabled() { return prefs.getBoolean(KEY_ADAPTIVE_LEARNING, true); }
+    public void setAdaptiveLearningEnabled(boolean v) { prefs.edit().putBoolean(KEY_ADAPTIVE_LEARNING, v).apply(); }
+
+    public boolean isGamingModeEnabled() { return prefs.getBoolean(KEY_GAMING_MODE, true); }
+    public void setGamingModeEnabled(boolean v) { prefs.edit().putBoolean(KEY_GAMING_MODE, v).apply(); }
+
+    public int getGamingModeValue() { return prefs.getInt(KEY_GAMING_MODE_VALUE, GAMING_MODE_AUTO); }
+    public void setGamingModeValue(int v) { prefs.edit().putInt(KEY_GAMING_MODE_VALUE, v).apply(); }
+
+    public boolean isScrollDetectionEnabled() { return prefs.getBoolean(KEY_SCROLL_DETECTION, true); }
+    public void setScrollDetectionEnabled(boolean v) { prefs.edit().putBoolean(KEY_SCROLL_DETECTION, v).apply(); }
+
+    public boolean isTypingDetectionEnabled() { return prefs.getBoolean(KEY_TYPING_DETECTION, true); }
+    public void setTypingDetectionEnabled(boolean v) { prefs.edit().putBoolean(KEY_TYPING_DETECTION, v).apply(); }
+
+    public boolean isRespectBackGestureEnabled() { return prefs.getBoolean(KEY_RESPECT_BACK_GESTURE, true); }
+    public void setRespectBackGestureEnabled(boolean v) { prefs.edit().putBoolean(KEY_RESPECT_BACK_GESTURE, v).apply(); }
+
+    public boolean isEdgeShrinkFullscreenEnabled() { return prefs.getBoolean(KEY_EDGE_SHRINK_FULLSCREEN, true); }
+    public void setEdgeShrinkFullscreenEnabled(boolean v) { prefs.edit().putBoolean(KEY_EDGE_SHRINK_FULLSCREEN, v).apply(); }
+
+    public boolean isPillAutoHideGamingEnabled() { return prefs.getBoolean(KEY_PILL_AUTO_HIDE_GAMING, true); }
+    public void setPillAutoHideGamingEnabled(boolean v) { prefs.edit().putBoolean(KEY_PILL_AUTO_HIDE_GAMING, v).apply(); }
+
+    public boolean startOnBoot() { return isAutoStart(); }
+    public boolean overlayEnabled() { return isPillEnabled(); }
+    public void setOverlayEnabled(boolean v) { setPillEnabled(v); }
+    public boolean backgroundRunning() { return isPillEnabled(); }
 }

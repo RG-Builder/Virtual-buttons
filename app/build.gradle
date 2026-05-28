@@ -8,8 +8,8 @@ android {
         applicationId 'com.example.virtualbuttons'
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName '1.1.0'
+        versionCode 4
+        versionName '2.0.0'
     }
 
     signingConfigs {
@@ -38,4 +38,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
+    implementation 'androidx.preference:preference:1.2.1'
 }

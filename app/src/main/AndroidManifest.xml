@@ -6,8 +6,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -22,35 +23,16 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".MainActivity" android:exported="false" />
-
-        <activity android:name=".BatteryActivity" android:exported="false" android:theme="@style/AppTheme" />
-        <activity android:name=".TutorialActivity" android:exported="false" android:theme="@style/AppTheme" />
-        <activity android:name=".TrainingActivity" android:exported="false" android:theme="@style/AppTheme" />
-
         <service
-            android:name=".FloatingVolumeService"
+            android:name=".GestureForegroundService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Persistent floating volume control requested by the user" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Gesture control overlay for virtual button replacement" />
         </service>
 
         <service
-            android:name=".ButtonPanelService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Virtual button panel for system controls" />
-        </service>
-
-        <service
-            android:name=".EnhancedGestureService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Enhanced edge gesture controls" />
-        </service>
-
-        <service
-            android:name=".VirtualButtonAccessibilityService"
+            android:name=".GestureAccessibilityService"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
@@ -79,8 +61,6 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-
-        <receiver android:name=".ProfileReceiver" android:exported="false" />
 
         <receiver android:name=".VolumeWidgetProvider" android:exported="true">
             <intent-filter>
