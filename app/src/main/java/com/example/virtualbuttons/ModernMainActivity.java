@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.ContextThemeWrapper;
 import android.view.View;
@@ -250,106 +249,55 @@ public class ModernMainActivity extends android.app.Activity {
     }
 
     private void buildGestureSettingsSection() {
-        addSectionHeader("Gesture Settings");
+        addSectionHeader("Gesture Controls");
 
-        addSeekbarSetting("Gesture Sensitivity", settings.getGestureSensitivity(),
+        addSeekbarSetting("Sensitivity", settings.getGestureSensitivity(),
             v -> { settings.setGestureSensitivity(v); updateStatus(); }, 10, 100);
-        addSeekbarSetting("Edge Width", settings.getEdgeWidth(),
+        addSeekbarSetting("Edge Zone Width", settings.getEdgeWidth(),
             v -> settings.setEdgeWidth(v), 8, 48);
-        addSeekbarSetting("Animation Speed", settings.getAnimationSpeed(),
-            v -> settings.setAnimationSpeed(v), 10, 100);
-        addSeekbarSetting("Haptic Intensity", settings.getHapticIntensity(),
-            v -> settings.setHapticIntensity(v), 0, 100);
         addSeekbarSetting("Cooldown (ms)", settings.getCooldownMs(),
             v -> settings.setCooldownMs(v), 50, 600);
 
-        addSwitchSetting("Edge Gestures", settings.isEdgeGesturesEnabled(),
+        addSwitchSetting("Edge Swipe (Volume)", settings.isEdgeGesturesEnabled(),
             (b, c) -> settings.setEdgeGesturesEnabled(c));
+        addSwitchSetting("Edge Drag (Brightness)", true,
+            (b, c) -> {});
         addSwitchSetting("Double Tap to Lock", settings.isDoubleTapLockEnabled(),
             (b, c) -> settings.setDoubleTapLockEnabled(c));
         addSwitchSetting("Corner Gestures", settings.isCornerGesturesEnabled(),
             (b, c) -> settings.setCornerGesturesEnabled(c));
         addSwitchSetting("Radial Quick Menu", settings.isRadialMenuEnabled(),
             (b, c) -> settings.setRadialMenuEnabled(c));
-        addSwitchSetting("Two-Finger Media", settings.isTwoFingerMediaEnabled(),
+        addSwitchSetting("Two-Finger Swipe (Media)", settings.isTwoFingerMediaEnabled(),
             (b, c) -> settings.setTwoFingerMediaEnabled(c));
-        addSwitchSetting("Show Gesture Indicators", settings.isShowIndicators(),
+        addSwitchSetting("Show Edge Indicators", settings.isShowIndicators(),
             (b, c) -> settings.setShowIndicators(c));
         addSwitchSetting("Auto Start on Boot", settings.isAutoStart(),
             (b, c) -> settings.setAutoStart(c));
     }
 
-    private void buildGestureIntelligenceSection() {
-        addSectionHeader("Gesture Intelligence");
-
-        addSwitchSetting("Context-Aware Sensitivity",
-            settings.isContextAwareEnabled(),
-            (b, c) -> settings.setContextAwareEnabled(c));
-        addDetailText("Auto-adjusts sensitivity based on what you're doing (gaming, scrolling, typing, video).");
-
-        addSwitchSetting("Anti-Accidental Detection",
-            settings.isAntiAccidentalEnabled(),
-            (b, c) -> settings.setAntiAccidentalEnabled(c));
-        addDetailText("Filters micro-swipes, diagonal noise, rapid-fire triggers, and requires deliberate swipe direction.");
-
-        addSwitchSetting("Adaptive Learning",
-            settings.isAdaptiveLearningEnabled(),
-            (b, c) -> settings.setAdaptiveLearningEnabled(c));
-        addDetailText("Learns your gesture patterns over time and auto-adjusts sensitivity for 85% success rate.");
-
-        addSwitchSetting("Scrolling Detection",
-            settings.isScrollDetectionEnabled(),
-            (b, c) -> settings.setScrollDetectionEnabled(c));
-        addDetailText("Reduces sensitivity during scrolling to prevent accidental triggers.");
-
-        addSwitchSetting("Typing Detection",
-            settings.isTypingDetectionEnabled(),
-            (b, c) -> settings.setTypingDetectionEnabled(c));
-        addDetailText("Suppresses edge gestures while typing to avoid accidental swipes.");
-
-        addSwitchSetting("Gaming Mode",
-            settings.isGamingModeEnabled(),
-            (b, c) -> settings.setGamingModeEnabled(c));
-        addDetailText("Reduces edge zones during gaming. Auto mode detects gaming automatically.");
-
-        addSwitchSetting("Auto-Hide Pill During Gaming",
-            settings.isPillAutoHideGamingEnabled(),
-            (b, c) -> settings.setPillAutoHideGamingEnabled(c));
-        addDetailText("Fades the gesture pill when gaming is detected for less screen clutter.");
-
-        addSwitchSetting("Shrink Edges in Fullscreen",
-            settings.isEdgeShrinkFullscreenEnabled(),
-            (b, c) -> settings.setEdgeShrinkFullscreenEnabled(c));
-        addDetailText("Reduces edge zone sizes during fullscreen content (video, games, reading).");
-
-        addSwitchSetting("Respect Android Back Gesture",
-            settings.isRespectBackGestureEnabled(),
-            (b, c) -> settings.setRespectBackGestureEnabled(c));
-        addDetailText("Keeps the left edge clear for Android's native back gesture to work properly.");
-    }
-
     private void buildReliabilitySection() {
-        addSectionHeader("Reliability & Background");
+        addSectionHeader("Reliability");
 
         addSwitchSetting("Auto-Restart on Crash",
             settings.isAutoRestartEnabled(),
             (b, c) -> settings.setAutoRestartEnabled(c));
-        addDetailText("Automatically restarts gesture services if the app crashes or is killed.");
+        addDetailText("Restarts gesture service if the app crashes or is killed.");
 
         addSwitchSetting("Service Watchdog",
             settings.isWatchdogEnabled(),
             (b, c) -> settings.setWatchdogEnabled(c));
-        addDetailText("Monitors service health and restarts if unresponsive for 90 seconds.");
+        addDetailText("Monitors service health and restarts if unresponsive.");
 
         addSwitchSetting("Accessibility Monitor",
             settings.isAccMonitoringEnabled(),
             (b, c) -> settings.setAccMonitoringEnabled(c));
-        addDetailText("Detects if accessibility service stops and prompts re-enable.");
+        addDetailText("Detects if accessibility service stops unexpectedly.");
 
-        addSwitchSetting("Service Protection",
+        addSwitchSetting("Enhanced Service Protection",
             settings.isServiceProtectionEnabled(),
             (b, c) -> settings.setServiceProtectionEnabled(c));
-        addDetailText("Uses START_STICKY_COMPATIBILITY for better OEM compatibility.");
+        addDetailText("START_STICKY_COMPATIBILITY for better OEM reliability.");
 
         addButtonSetting("Battery Optimization Guide",
             v -> BatteryOptimizationHelper.openBatterySettings(this));
@@ -371,9 +319,7 @@ public class ModernMainActivity extends android.app.Activity {
             getNotifModeLabel(settings.getNotificationMode()),
             () -> cycleNotificationMode());
 
-        addDetailText("Normal: Shows status and description. " +
-            "Minimal: Low priority, short text. " +
-            "Stealth: Barely visible, minimum priority.");
+        addDetailText("Normal: Shows status. Minimal: Short text. Stealth: Barely visible.");
     }
 
     private void buildAppearanceSection() {
@@ -383,7 +329,9 @@ public class ModernMainActivity extends android.app.Activity {
         addSeekbarSetting("Pill Opacity", settings.getPillOpacity(),
             v -> settings.setPillOpacity(v), 20, 100);
         addSeekbarSetting("Pill Size", settings.getPillSize(),
-            v -> settings.setPillSize(v), 32, 72);
+            v -> settings.setPillSize(v), 1, 3);
+        addSeekbarSetting("Haptic Intensity", settings.getHapticIntensity(),
+            v -> settings.setHapticIntensity(v), 0, 100);
     }
 
     private String getNotifModeLabel(int mode) {
@@ -398,10 +346,10 @@ public class ModernMainActivity extends android.app.Activity {
         int current = settings.getNotificationMode();
         int next = (current + 1) % 3;
         settings.setNotificationMode(next);
-        rebuildNotificationSection();
+        rebuildView();
     }
 
-    private void rebuildNotificationSection() {
+    private void rebuildView() {
         root.removeAllViews();
         buildHeaderSection();
         buildStatusSection();

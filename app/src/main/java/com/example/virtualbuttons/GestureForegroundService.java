@@ -8,20 +8,15 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 
-import com.example.virtualbuttons.action.ActionExecutor;
-import com.example.virtualbuttons.gesture.AppContextDetector;
-import com.example.virtualbuttons.gesture.GamingModeController;
-import com.example.virtualbuttons.gesture.GestureEngine;
-import com.example.virtualbuttons.gesture.GesturePredictor;
-import com.example.virtualbuttons.gesture.GestureZoneManager;
+import com.example.virtualbuttons.core.ActionExecutor;
+import com.example.virtualbuttons.core.SimpleGestureEngine;
+import com.example.virtualbuttons.extensions.ExtensionManager;
 import com.example.virtualbuttons.overlay.BrightnessOverlayView;
 import com.example.virtualbuttons.overlay.GestureIndicatorView;
 import com.example.virtualbuttons.overlay.GesturePillView;
@@ -35,9 +30,7 @@ public class GestureForegroundService extends Service {
     private static final String CHANNEL_ID = "gesture_service_channel";
     private static final String CHANNEL_ID_STEALTH = "gesture_service_stealth";
     private static final int NOTIFICATION_ID = 1001;
-    private static final String TAG = "GestureService";
     private static final long ACC_MONITOR_INTERVAL_MS = 5000;
-    private static final long CONTEXT_UPDATE_INTERVAL_MS = 300;
 
     private WindowManager wm;
     private GesturePillView pillView;
@@ -51,8 +44,8 @@ public class GestureForegroundService extends Service {
     private WindowManager.LayoutParams radialParams;
     private WindowManager.LayoutParams indicatorParams;
 
-    private GestureEngine gestureEngine;
-    private GestureEngine pillGestureEngine;
+    private SimpleGestureEngine gestureEngine;
+    private SimpleGestureEngine pillGestureEngine;
     private ActionExecutor actionExecutor;
     private HapticFeedbackUtil haptics;
     private SettingsStore settings;
@@ -61,20 +54,14 @@ public class GestureForegroundService extends Service {
     private int screenHeight;
 
     private boolean isRunning;
-    private float lastDragTotal;
     private int activeEdge;
 
-    private AppContextDetector contextDetector;
-    private GestureZoneManager zoneManager;
-    private GesturePredictor predictor;
-    private GamingModeController gamingController;
+    private ExtensionManager extensionManager;
 
     private final List<View> overlayViews = new ArrayList<>();
-    private Handler accMonitorHandler;
+    private android.os.Handler accMonitorHandler;
     private Runnable accMonitorRunnable;
     private int lastAccCheckState = -1;
-    private Handler contextUpdateHandler;
-    private int currentContext = AppContextDetector.CONTEXT_NORMAL;
 
     @Override
     public void onCreate() {
@@ -89,13 +76,13 @@ public class GestureForegroundService extends Service {
         haptics = new HapticFeedbackUtil(this, settings.getHapticIntensity());
         actionExecutor = new ActionExecutor(this);
 
+        extensionManager = new ExtensionManager();
+
         updateScreenSize();
-        createIntelligenceSystems();
         createGestureEngines();
         createOverlayViews();
         setupGestureCallbacks();
         addAllOverlays();
-        startContextUpdater();
 
         if (settings.isWatchdogEnabled()) {
             ServiceWatchdog.arm(this);
@@ -117,86 +104,17 @@ public class GestureForegroundService extends Service {
         screenHeight = size.y;
     }
 
-    private void createIntelligenceSystems() {
-        contextDetector = new AppContextDetector(screenWidth, screenHeight);
-        zoneManager = new GestureZoneManager(screenWidth, screenHeight, density);
-        zoneManager.setBaseEdgeWidth(settings.getEdgeWidth());
-        predictor = new GesturePredictor(this);
-        predictor.setLearningEnabled(settings.isAdaptiveLearningEnabled());
-        gamingController = new GamingModeController();
-        int gamingMode = settings.getGamingModeValue();
-        gamingController.setMode(gamingMode == 0 ? GamingModeController.MODE_OFF :
-            gamingMode == 2 ? GamingModeController.MODE_ON : GamingModeController.MODE_AUTO);
-    }
-
     private void createGestureEngines() {
-        gestureEngine = new GestureEngine(screenWidth, screenHeight, density);
+        gestureEngine = new SimpleGestureEngine(screenWidth, screenHeight, density);
         gestureEngine.setSensitivity(settings.getGestureSensitivity() / 50f);
         gestureEngine.setEdgeWidth(settings.getEdgeWidth(), density);
         gestureEngine.setCooldownMs(settings.getCooldownMs());
-        gestureEngine.setContextDetector(contextDetector);
-        gestureEngine.setPredictor(predictor);
-        gestureEngine.setZoneManager(zoneManager);
-        gestureEngine.setAntiAccidentalEnabled(settings.isAntiAccidentalEnabled());
+        gestureEngine.setExtensionManager(extensionManager);
 
-        pillGestureEngine = new GestureEngine(screenWidth, screenHeight, density);
+        pillGestureEngine = new SimpleGestureEngine(screenWidth, screenHeight, density);
         pillGestureEngine.setSensitivity(settings.getGestureSensitivity() / 50f);
         pillGestureEngine.setEdgeWidth(settings.getEdgeWidth(), density);
         pillGestureEngine.setCooldownMs(settings.getCooldownMs());
-        pillGestureEngine.setAntiAccidentalEnabled(settings.isAntiAccidentalEnabled());
-        pillGestureEngine.setContextDetector(contextDetector);
-        pillGestureEngine.setPredictor(predictor);
-    }
-
-    private void startContextUpdater() {
-        contextUpdateHandler = new Handler(Looper.getMainLooper());
-        contextUpdateHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                int newContext = contextDetector.getCurrentContext();
-                if (newContext != currentContext) {
-                    currentContext = newContext;
-                    onContextChanged(newContext);
-                }
-                float multiplier = contextDetector.getActiveSensitivityMultiplier();
-                int minSwipe = contextDetector.getMinSwipeDistanceMultiplier();
-                gestureEngine.updateContextParams(multiplier, minSwipe);
-
-                if (settings.isEdgeShrinkFullscreenEnabled()) {
-                    zoneManager.setActiveContext(newContext);
-                }
-
-                if (settings.isPillAutoHideGamingEnabled() && gamingController.isActive()) {
-                    if (pillView.getVisibility() == View.VISIBLE) {
-                        pillView.animate().alpha(0.3f).setDuration(300);
-                    }
-                } else if (pillView.getAlpha() < 1f) {
-                    pillView.animate().alpha(1f).setDuration(300);
-                }
-
-                if (contextUpdateHandler != null) {
-                    contextUpdateHandler.postDelayed(this, CONTEXT_UPDATE_INTERVAL_MS);
-                }
-            }
-        }, CONTEXT_UPDATE_INTERVAL_MS);
-    }
-
-    private void stopContextUpdater() {
-        if (contextUpdateHandler != null) {
-            contextUpdateHandler.removeCallbacksAndMessages(null);
-        }
-    }
-
-    private void onContextChanged(int newContext) {
-        if (newContext == AppContextDetector.CONTEXT_GAMING && settings.isGamingModeEnabled()) {
-            zoneManager.setActiveContext(AppContextDetector.CONTEXT_GAMING);
-            if (settings.isPillAutoHideGamingEnabled()) {
-                pillView.animate().alpha(0.2f).setDuration(200);
-            }
-        } else if (newContext == AppContextDetector.CONTEXT_NORMAL) {
-            zoneManager.setActiveContext(AppContextDetector.CONTEXT_NORMAL);
-            pillView.animate().alpha(1f).setDuration(200);
-        }
     }
 
     private void createOverlayViews() {
@@ -207,11 +125,6 @@ public class GestureForegroundService extends Service {
             density);
         pillView.setHaptics(haptics);
         pillView.setGestureEngine(pillGestureEngine);
-        pillView.setPillTouchListener(event -> {
-            if (gamingController != null) {
-                gamingController.onTouchEvent(event);
-            }
-        });
 
         volumeOverlay = new VolumeOverlayView(this, density);
         brightnessOverlay = new BrightnessOverlayView(this, density);
@@ -306,18 +219,15 @@ public class GestureForegroundService extends Service {
     }
 
     private void startAccMonitoring() {
-        accMonitorHandler = new Handler(Looper.getMainLooper());
+        accMonitorHandler = new android.os.Handler(android.os.Looper.getMainLooper());
         accMonitorRunnable = new Runnable() {
             @Override
             public void run() {
                 GestureAccessibilityService acc = GestureAccessibilityService.getInstance();
                 boolean available = acc != null;
                 int state = available ? 1 : 0;
-
                 if (state != lastAccCheckState) {
                     lastAccCheckState = state;
-                    if (!available && lastAccCheckState == 0) {
-                    }
                 }
                 if (accMonitorHandler != null) {
                     accMonitorHandler.postDelayed(this, ACC_MONITOR_INTERVAL_MS);
@@ -334,7 +244,7 @@ public class GestureForegroundService extends Service {
     }
 
     private void setupGestureCallbacks() {
-        gestureEngine.setListener(new GestureEngine.GestureListener() {
+        gestureEngine.setListener(new SimpleGestureEngine.GestureListener() {
             @Override
             public void onGestureDetected(int gestureType, int edge, float x, float y, float velocity) {
                 ServiceWatchdog.heartbeat();
@@ -376,7 +286,7 @@ public class GestureForegroundService extends Service {
             }
         });
 
-        pillGestureEngine.setListener(new GestureEngine.GestureListener() {
+        pillGestureEngine.setListener(new SimpleGestureEngine.GestureListener() {
             @Override
             public void onGestureDetected(int gestureType, int edge, float x, float y, float velocity) {
                 ServiceWatchdog.heartbeat();
@@ -418,22 +328,15 @@ public class GestureForegroundService extends Service {
     }
 
     private void handleEdgeGesture(int gestureType, int edge, float x, float y, float velocity) {
-        boolean isLeft = (edge & GestureEngine.EDGE_LEFT) != 0;
-        boolean isRight = (edge & GestureEngine.EDGE_RIGHT) != 0;
-        boolean isCorner = (edge & (GestureEngine.CORNER_TOP_LEFT | GestureEngine.CORNER_TOP_RIGHT
-            | GestureEngine.CORNER_BOTTOM_LEFT | GestureEngine.CORNER_BOTTOM_RIGHT)) != 0;
-
-        if (isCorner && settings.isCornerGesturesEnabled()) {
-            handleCornerGesture(edge);
-            return;
-        }
+        boolean isLeft = (edge & SimpleGestureEngine.EDGE_LEFT) != 0;
+        boolean isRight = (edge & SimpleGestureEngine.EDGE_RIGHT) != 0;
 
         if ((isLeft || isRight) && settings.isEdgeGesturesEnabled()) {
-            if (gestureType == GestureEngine.GESTURE_SWIPE_UP) {
+            if (gestureType == SimpleGestureEngine.GESTURE_SWIPE_UP) {
                 haptics.tick();
                 actionExecutor.volumeUp();
                 showVolumeOverlay((int) x, (int) y, isLeft ? 1 : 2);
-            } else if (gestureType == GestureEngine.GESTURE_SWIPE_DOWN) {
+            } else if (gestureType == SimpleGestureEngine.GESTURE_SWIPE_DOWN) {
                 haptics.tick();
                 actionExecutor.volumeDown();
                 showVolumeOverlay((int) x, (int) y, isLeft ? 1 : 2);
@@ -441,48 +344,26 @@ public class GestureForegroundService extends Service {
         }
     }
 
-    private void handleCornerGesture(int edge) {
-        haptics.heavyTap();
-        if ((edge & GestureEngine.CORNER_TOP_LEFT) != 0) {
-            actionExecutor.toggleFlashlight();
-        } else if ((edge & GestureEngine.CORNER_TOP_RIGHT) != 0) {
-            GestureAccessibilityService acc = GestureAccessibilityService.getInstance();
-            if (acc != null) acc.performScreenshot();
-        } else if ((edge & GestureEngine.CORNER_BOTTOM_LEFT) != 0) {
-            actionExecutor.toggleMute();
-        } else if ((edge & GestureEngine.CORNER_BOTTOM_RIGHT) != 0) {
-            GestureAccessibilityService acc = GestureAccessibilityService.getInstance();
-            if (acc != null) acc.performQuickSettings();
-        }
-    }
-
     private void handleEdgeDrag(int edge, float delta, float total, float velocity) {
-        boolean isLeft = (edge & GestureEngine.EDGE_LEFT) != 0;
-        boolean isRight = (edge & GestureEngine.EDGE_RIGHT) != 0;
+        boolean isLeft = (edge & SimpleGestureEngine.EDGE_LEFT) != 0;
+        boolean isRight = (edge & SimpleGestureEngine.EDGE_RIGHT) != 0;
 
         if (isLeft || isRight) {
             activeEdge = isLeft ? 1 : 2;
-            lastDragTotal = total;
-
             float dragSensitivity = 0.005f;
             float brightnessDelta = delta * dragSensitivity;
             actionExecutor.changeBrightness(brightnessDelta);
-
             haptics.tick();
             showBrightnessOverlay((int) (isLeft ? 12 * density : screenWidth - 12 * density),
                 (int) (actionExecutor.getBrightness() * screenHeight));
-        } else if ((edge & GestureEngine.EDGE_TOP) != 0) {
+        } else if ((edge & SimpleGestureEngine.EDGE_TOP) != 0) {
             activeEdge = 3;
-            lastDragTotal = total;
             float volDelta = delta > 0 ? -1 : 1;
             if (Math.abs(delta) > 20) {
                 if (volDelta < 0) actionExecutor.volumeDown();
                 else actionExecutor.volumeUp();
                 actionExecutor.notifyVolume();
             }
-        } else if ((edge & GestureEngine.EDGE_BOTTOM) != 0) {
-            activeEdge = 4;
-            lastDragTotal = total;
         }
     }
 
@@ -491,12 +372,12 @@ public class GestureForegroundService extends Service {
     }
 
     private void handlePillGesture(int gestureType, int edge, float x, float y, float velocity) {
-        if (gestureType == GestureEngine.GESTURE_SWIPE_UP) {
+        if (gestureType == SimpleGestureEngine.GESTURE_SWIPE_UP) {
             haptics.tick();
             actionExecutor.volumeUp();
             showVolumeOverlay(pillParams.x + pillView.getPillWidth(),
                 pillParams.y + pillView.getPillHeight() / 2, 1);
-        } else if (gestureType == GestureEngine.GESTURE_SWIPE_DOWN) {
+        } else if (gestureType == SimpleGestureEngine.GESTURE_SWIPE_DOWN) {
             haptics.tick();
             actionExecutor.volumeDown();
             showVolumeOverlay(pillParams.x + pillView.getPillWidth(),
@@ -514,8 +395,7 @@ public class GestureForegroundService extends Service {
     private void showBrightnessOverlay(int x, int y) {
         if (brightnessOverlay == null) return;
         float b = actionExecutor.getBrightness();
-        int edge = activeEdge;
-        brightnessOverlay.show(b, x, y, edge);
+        brightnessOverlay.show(b, x, y, activeEdge);
     }
 
     private void showRadialMenu(float x, float y) {
@@ -576,7 +456,6 @@ public class GestureForegroundService extends Service {
         isRunning = false;
         ServiceWatchdog.disarm();
         stopAccMonitoring();
-        stopContextUpdater();
 
         for (View v : overlayViews) {
             try {
@@ -676,4 +555,7 @@ public class GestureForegroundService extends Service {
         return builder.build();
     }
 
+    public void registerExtension(com.example.virtualbuttons.extensions.GestureExtension extension) {
+        extensionManager.register(extension);
+    }
 }

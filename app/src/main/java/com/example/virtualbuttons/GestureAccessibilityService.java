@@ -31,7 +31,7 @@ public class GestureAccessibilityService extends AccessibilityService {
         handler.postDelayed(() -> {
             if (!isConnected && serviceWasRunning) {
                 SettingsStore settings = new SettingsStore(GestureAccessibilityService.this);
-                if (settings.isAccMonitoringEnabled() && settings.isPillEnabled()) {
+                if (settings.isAccMonitoringEnabled()) {
                     Intent intent = new Intent(this, ModernMainActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     intent.putExtra("show_accessibility_prompt", true);

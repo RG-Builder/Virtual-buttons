@@ -15,7 +15,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 
 import com.example.virtualbuttons.HapticFeedbackUtil;
-import com.example.virtualbuttons.gesture.GestureEngine;
+import com.example.virtualbuttons.core.SimpleGestureEngine;
 
 public class GesturePillView extends View {
     private static final int PILL_WIDTH_DP = 8;
@@ -38,7 +38,7 @@ public class GesturePillView extends View {
     private float snapTargetX;
     private float snapTargetY;
 
-    private GestureEngine gestureEngine;
+    private SimpleGestureEngine gestureEngine;
     private HapticFeedbackUtil haptics;
     private boolean attachedToLeft;
     private OnTouchListener pillTouchListener;
@@ -88,7 +88,7 @@ public class GesturePillView extends View {
         this.haptics = haptics;
     }
 
-    public void setGestureEngine(GestureEngine engine) {
+    public void setGestureEngine(SimpleGestureEngine engine) {
         this.gestureEngine = engine;
     }
 
