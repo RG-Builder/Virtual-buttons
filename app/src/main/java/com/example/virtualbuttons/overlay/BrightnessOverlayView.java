@@ -112,6 +112,7 @@ public class BrightnessOverlayView extends android.view.View {
 
         if (!isShowing) {
             isShowing = true;
+            setVisibility(VISIBLE);
             setAlpha(0f);
             setTranslationY(20 * density);
 
@@ -172,11 +173,7 @@ public class BrightnessOverlayView extends android.view.View {
             @Override
             public void onAnimationEnd(Animator animation) {
                 isShowing = false;
-                if (wm != null && params != null && getParent() != null) {
-                    try {
-                        wm.removeView(BrightnessOverlayView.this);
-                    } catch (Exception ignored) {}
-                }
+                setVisibility(GONE);
             }
         });
         fadeAnimator.start();

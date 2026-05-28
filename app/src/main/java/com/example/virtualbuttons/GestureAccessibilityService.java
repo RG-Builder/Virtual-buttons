@@ -78,7 +78,9 @@ public class GestureAccessibilityService extends AccessibilityService {
     }
 
     public void performScreenshot() {
-        performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT);
+        if (Build.VERSION.SDK_INT >= 34) {
+            performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT);
+        }
     }
 
     public void performQuickSettings() {

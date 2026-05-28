@@ -1,5 +1,7 @@
 package com.example.virtualbuttons.overlay;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -151,8 +153,9 @@ public class RadialMenuView extends View {
             setScaleY(animationProgress);
             invalidate();
         });
-        dismissAnimator.addUpdateListener(a -> {
-            if ((float) a.getAnimatedValue() < 0.01f) {
+        dismissAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
                 isShowing = false;
                 setVisibility(GONE);
                 if (listener != null) listener.onMenuDismissed();

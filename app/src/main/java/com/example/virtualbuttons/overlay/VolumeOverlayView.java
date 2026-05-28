@@ -138,6 +138,7 @@ public class VolumeOverlayView extends View {
 
         if (!isShowing) {
             isShowing = true;
+            setVisibility(VISIBLE);
             setAlpha(0f);
             setTranslationY(20 * density);
 
@@ -200,11 +201,7 @@ public class VolumeOverlayView extends View {
             @Override
             public void onAnimationEnd(Animator animation) {
                 isShowing = false;
-                if (wm != null && params != null && getParent() != null) {
-                    try {
-                        wm.removeView(VolumeOverlayView.this);
-                    } catch (Exception ignored) {}
-                }
+                setVisibility(GONE);
             }
         });
         fadeAnimator.start();

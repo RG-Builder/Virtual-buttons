@@ -18,6 +18,7 @@ import com.example.virtualbuttons.core.ActionExecutor;
 import com.example.virtualbuttons.core.SimpleGestureEngine;
 import com.example.virtualbuttons.extensions.ExtensionManager;
 import com.example.virtualbuttons.overlay.BrightnessOverlayView;
+import com.example.virtualbuttons.overlay.EdgeTouchOverlay;
 import com.example.virtualbuttons.overlay.GestureIndicatorView;
 import com.example.virtualbuttons.overlay.GesturePillView;
 import com.example.virtualbuttons.overlay.RadialMenuView;
@@ -38,11 +39,15 @@ public class GestureForegroundService extends Service {
     private BrightnessOverlayView brightnessOverlay;
     private RadialMenuView radialMenu;
     private GestureIndicatorView indicatorView;
+    private EdgeTouchOverlay leftEdgeOverlay;
+    private EdgeTouchOverlay rightEdgeOverlay;
     private WindowManager.LayoutParams pillParams;
     private WindowManager.LayoutParams volumeParams;
     private WindowManager.LayoutParams brightnessParams;
     private WindowManager.LayoutParams radialParams;
     private WindowManager.LayoutParams indicatorParams;
+    private WindowManager.LayoutParams leftEdgeParams;
+    private WindowManager.LayoutParams rightEdgeParams;
 
     private SimpleGestureEngine gestureEngine;
     private SimpleGestureEngine pillGestureEngine;
@@ -131,6 +136,17 @@ public class GestureForegroundService extends Service {
         radialMenu = new RadialMenuView(this, density);
         indicatorView = new GestureIndicatorView(this);
 
+        int edgeWidthPx = (int) (settings.getEdgeWidth() * density);
+        leftEdgeOverlay = new EdgeTouchOverlay(this, true);
+        leftEdgeOverlay.setGestureEngine(gestureEngine);
+        leftEdgeParams = leftEdgeOverlay.createLayoutParams(edgeWidthPx);
+        leftEdgeOverlay.setLayoutGravity(leftEdgeParams);
+
+        rightEdgeOverlay = new EdgeTouchOverlay(this, false);
+        rightEdgeOverlay.setGestureEngine(gestureEngine);
+        rightEdgeParams = rightEdgeOverlay.createLayoutParams(edgeWidthPx);
+        rightEdgeOverlay.setLayoutGravity(rightEdgeParams);
+
         int pillW = pillView.getPillWidth();
         int pillH = pillView.getPillHeight();
 
@@ -178,7 +194,7 @@ public class GestureForegroundService extends Service {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT);
         radialParams.gravity = Gravity.TOP | Gravity.START;
 
@@ -195,6 +211,12 @@ public class GestureForegroundService extends Service {
 
     private void addAllOverlays() {
         try {
+            wm.addView(leftEdgeOverlay, leftEdgeParams);
+            overlayViews.add(leftEdgeOverlay);
+
+            wm.addView(rightEdgeOverlay, rightEdgeParams);
+            overlayViews.add(rightEdgeOverlay);
+
             wm.addView(pillView, pillParams);
             overlayViews.add(pillView);
 
