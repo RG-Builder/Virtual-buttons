@@ -1,0 +1,4 @@
+-keep class com.example.virtualbuttons.** { *; }
+-keep class com.example.virtualbuttons.gesture.** { *; }
+-keep class com.example.virtualbuttons.overlay.** { *; }
+-keep class com.example.virtualbuttons.action.** { *; }
